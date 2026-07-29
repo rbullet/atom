@@ -18,8 +18,8 @@ extern "C" {
  * @defgroup spinlock Spinlocks
  * @brief Hardware-backed cross-core synchronization primitives.
  *
- * Provides busy-wait locking primitives based on the RP2040 hardware
- * spinlock peripheral.
+ * Provides busy-wait locking primitives backed by hardware spinlock
+ * support on the target architecture.
  *
  * Spinlocks are intended for very short critical sections shared between
  * cores or between interrupt and thread contexts.
@@ -34,11 +34,11 @@ extern "C" {
 
 
 /**
- * @brief RP2040 hardware spinlock type.
+ * @brief Hardware spinlock type.
  *
  * A spinlock is represented by a volatile 32-bit hardware register.
  *
- * On RP2040:
+ * Semantics are architecture-defined, but conventionally:
  * - Reading a spinlock register attempts to acquire the lock.
  * - A non-zero value indicates successful acquisition.
  * - Zero indicates that another core currently owns the lock.
@@ -48,6 +48,56 @@ extern "C" {
  */
 typedef volatile uint32_t spinlock_t;
 
+/** @name Application-owned hardware spinlocks
+ *
+ * Each supported architecture reserves a set of hardware spinlocks for
+ * internal use by the ATOM kernel and its own port (scheduler, mutex,
+ * semaphore, condition variable, deferred tasks, allocator, etc.).
+ *
+ * The 11 spinlocks below (`spinlock0` through `spinlock10`) are
+ * guaranteed by every architecture port to be reserved exclusively for
+ * application use and are never touched by the kernel. Application code
+ * may freely use any of these constants with spinlock_lock(),
+ * spinlock_unlock(), spinlock_try_lock(), or the WITH_SPINLOCK() scoped
+ * guard, regardless of which target the code is built for.
+ *
+ * @{
+ */
+
+/** @brief Application-owned hardware spinlock 0. */
+extern spinlock_t* const spinlock0;
+
+/** @brief Application-owned hardware spinlock 1. */
+extern spinlock_t* const spinlock1;
+
+/** @brief Application-owned hardware spinlock 2. */
+extern spinlock_t* const spinlock2;
+
+/** @brief Application-owned hardware spinlock 3. */
+extern spinlock_t* const spinlock3;
+
+/** @brief Application-owned hardware spinlock 4. */
+extern spinlock_t* const spinlock4;
+
+/** @brief Application-owned hardware spinlock 5. */
+extern spinlock_t* const spinlock5;
+
+/** @brief Application-owned hardware spinlock 6. */
+extern spinlock_t* const spinlock6;
+
+/** @brief Application-owned hardware spinlock 7. */
+extern spinlock_t* const spinlock7;
+
+/** @brief Application-owned hardware spinlock 8. */
+extern spinlock_t* const spinlock8;
+
+/** @brief Application-owned hardware spinlock 9. */
+extern spinlock_t* const spinlock9;
+
+/** @brief Application-owned hardware spinlock 10. */
+extern spinlock_t* const spinlock10;
+
+/** @} */
 
 /**
  * @brief Acquire a spinlock.
@@ -143,7 +193,7 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * Example:
  *
  * @code
- * WITH_SPINLOCK(scheduler_spinlock)
+ * WITH_SPINLOCK(spinlock0)
  * {
  *     shared_state++;
  * }

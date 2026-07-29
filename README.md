@@ -194,13 +194,24 @@ WITH_INTERRUPTS_DISABLED
 This avoids common bugs where an early `return` or exception path forgets to
 release a lock.
 
-`WITH_SPINLOCK(lock)` follows the same pattern, but is currently only usable
-internally: the public API exposes the `spinlock_t` type and the
-`spinlock_lock()` / `spinlock_unlock()` / `spinlock_try_lock()` functions, but
-no public constant refers to one of the RP2040's hardware spinlock slots —
-those are reserved for the kernel's own subsystems (scheduler, mutex,
-semaphore, condition variable, deferred tasks, allocator). Application code
-cannot yet obtain a hardware-backed spinlock of its own.
+`WITH_SPINLOCK(lock)` follows the same pattern:
+
+```c
+WITH_SPINLOCK(spinlock0)
+{
+  update_shared_hardware_state();
+}
+```
+
+The RP2040 SIO peripheral provides 32 independent hardware spinlocks, but
+the public API only exposes 11 of them (`spinlock0` through `spinlock10`)
+as portable constants. This is a deliberate architectural choice: every
+supported architecture port guarantees at least these 11 slots for
+application use, regardless of how many hardware spinlocks the underlying
+chip actually provides or how many the kernel reserves internally
+(scheduler, mutex, semaphore, condition variable, deferred task, and
+allocator subsystems). Application code written against this API remains
+portable across architecture ports.
 
 ---
 
@@ -370,7 +381,7 @@ atom/
 | Mutex | Recursive mutual exclusion |
 | Semaphore | Counting synchronization |
 | Condition Variable | Wait/signal synchronization |
-| Spinlock | Hardware-backed cross-core locking (currently used internally by the kernel only; no public instance is exposed to applications) |
+| Spinlock | Hardware-backed cross-core locking (`spinlock0`-`spinlock10` are reserved for application use; remaining slots are used internally by the kernel) |
 | Deferred Task | Delayed or periodic callbacks |
 | Interrupt Control | Scoped interrupt masking |
 | Scoped Guards | `WITH_MUTEX` / `WITH_SEMAPHORE` / `WITH_INTERRUPTS_DISABLED` blocks |
@@ -507,8 +518,9 @@ Current limitations include:
 - Blocking-only UART driver (no interrupt-driven/async I/O)
 - `duration_t` uses `float`; the Cortex-M0+ has no hardware FPU, so duration
   arithmetic is done in software
-- No public API to acquire an application-owned hardware spinlock; all 32
-  RP2040 spinlock slots are currently reserved for internal kernel use
+- Only 11 portable hardware spinlock slots (`spinlock0`-`spinlock10`) are
+  exposed for application use; additional slots may exist depending on the
+  architecture port but are reserved internally by the kernel
 
 ---
 

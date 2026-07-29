@@ -18,9 +18,9 @@ extern "C" {
 #define SIO_FIFO_RD_OFFSET 0X0058
 #define SIO_FIFO_WR_OFFSET 0X0054
 
-#define SIO_FIFO_ST     ((volatile uint32_t*)(SIO_BASE + SIO_FIFO_ST_OFFSET))
-#define SIO_FIFO_RD     ((volatile uint32_t*)(SIO_BASE + SIO_FIFO_RD_OFFSET))
-#define SIO_FIFO_WR     ((volatile uint32_t*)(SIO_BASE + SIO_FIFO_WR_OFFSET))
+#define SIO_FIFO_ST     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_ST_OFFSET))
+#define SIO_FIFO_RD     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_RD_OFFSET))
+#define SIO_FIFO_WR     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_WR_OFFSET))
 
 #define CPU_COUNT 2
 #define CPUID           (*((volatile uint32_t*)(SIO_BASE + SIO_CPUID_OFFSET)))
