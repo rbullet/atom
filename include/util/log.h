@@ -28,8 +28,8 @@ extern "C" {
  *
  * Example:
  * @code
- * log_set_level(LOG_LEVEL_INFO);
- * log_set_formatter(log_timestamp_formatter);
+ * log_set_min_level(LOG_LEVEL_INFO);
+ * log_set_printer(log_default_printer);
  * log_set_output(stdout);
  *
  * log_info("System initialized with version %d", version);

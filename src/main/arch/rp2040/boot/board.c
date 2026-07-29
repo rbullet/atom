@@ -1,17 +1,16 @@
 #include <string.h>
+#include "atom_config.h"
 #include <rp2040/concurrent/interrupts.h>
-
-#include "rp2040/config.h"
 #include "concurrent/interrupts.h"
 #include "io/uart.h"
 #include "util/log.h"
-#include "rp2040/libc.h"
 #include "rp2040/system/xosc.h"
 #include "rp2040/system/clocks.h"
 #include "rp2040/system/pll.h"
 #include "rp2040/system/resets.h"
 #include "rp2040/io/gpio.h"
 #include "rp2040/concurrent/scheduler.h"
+#include "rp2040/concurrent/spinlock.h"
 
 // --- Forward declarations ---
 static void board_init_xosc(void);
@@ -22,8 +21,6 @@ static void board_init_interrupts(void);
 static void board_init_pll(void);
 static void board_init_clocks(void);
 static void board_init_uart(void);
-static void board_init_stdin(void);
-static void board_init_stdout(void);
 static void board_init_logging(void);
 static void board_init_scheduler();
 
@@ -38,8 +35,6 @@ void board_init(void)
   board_init_pll();
   board_init_clocks();
   board_init_uart();
-  board_init_stdin();
-  board_init_stdout();
   board_init_logging();
   board_init_scheduler();
 }
@@ -61,10 +56,9 @@ static void board_reset_clocks(void)
 // --- Initialize all spinlocks to unlocked state ---
 static void board_init_spinlocks(void)
 {
-  volatile uint32_t* spinlocks = (volatile uint32_t*)(SIO_BASE + SIO_SPINLOCK0_OFFSET);
   for (size_t i = 0; i < 32; i++)
   {
-    spinlocks[i] = 1;
+    spinlock0[i] = 1;
   }
 }
 
@@ -126,28 +120,6 @@ static void board_init_uart(void)
   gpio_set_func(0, GPIO_FUNC_2);
   gpio_set_func(1, GPIO_FUNC_2);
   uart_init(uart0, UART_BAUD_RATE);
-}
-
-// --- Redirect stdin to UART0 ---
-static ssize_t stdin_to_uart0(uint8_t* ptr, size_t const len)
-{
-  return (ssize_t)uart_read(uart0, ptr, len);
-}
-
-static void board_init_stdin(void)
-{
-  libc_set_read_callback(stdin_to_uart0);
-}
-
-// --- Redirect stdout to UART0 ---
-static ssize_t stdout_to_uart0(uint8_t const* ptr, size_t const len)
-{
-  return (ssize_t)uart_write(uart0, ptr, len);
-}
-
-static void board_init_stdout(void)
-{
-  libc_set_write_callback(stdout_to_uart0);
 }
 
 // --- Configure logging system output and level ---

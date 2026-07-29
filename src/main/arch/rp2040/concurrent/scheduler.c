@@ -1,9 +1,8 @@
 #include <string.h>
 
+#include "atom_config.h"
 #include "util/assert.h"
 #include "util/helpers.h"
-#include "rp2040/rp2040.h"
-#include "rp2040/config.h"
 #include "rp2040/system/cpu.h"
 #include "rp2040/concurrent/deferred_task.h"
 #include "rp2040/concurrent/interrupts.h"
@@ -11,6 +10,25 @@
 #include "rp2040/concurrent/scheduler.h"
 #include "util/collection/list.h"
 #include "util/collection/sorted_list.h"
+
+// --- PPB peripheral registers (from RP2040 SVD) ---
+#define PPB_BASE 0XE0000000
+#define PPB_ICSR_OFFSET 0XED04
+#define PPB_SYST_CSR_OFFSET 0XE010
+#define PPB_SYST_CSR_ENABLE_MASK 0X1
+#define PPB_SYST_CSR_ENABLE_OFFSET 0
+#define PPB_SYST_RVR_OFFSET 0XE014
+#define PPB_SYST_RVR_RELOAD_MASK 0XFFFFFF
+#define PPB_SYST_RVR_RELOAD_OFFSET 0
+#define PPB_SYST_CVR_OFFSET 0XE018
+#define PPB_SYST_CVR_CURRENT_MASK 0XFFFFFF
+#define PPB_SYST_CVR_CURRENT_OFFSET 0
+#define PPB_SYST_CALIB_OFFSET 0XE01C
+#define PPB_NVIC_IPR3_OFFSET 0XE40C
+#define PPB_NVIC_IPR3_IP_14_MASK 0XC00000
+#define PPB_NVIC_IPR3_IP_14_OFFSET 22
+#define PPB_NVIC_IPR3_IP_15_MASK 0XC0000000
+#define PPB_NVIC_IPR3_IP_15_OFFSET 30
 
 // --- Cortex-M SysTick & PendSV Registers ---
 #define ICSR       REG(PPB_BASE, PPB_ICSR_OFFSET)
@@ -33,6 +51,10 @@
 #define DEFERRED_TASK_THREAD_STACK_SIZE 1024      // Deferred thread stack size in bytes
 
 #define THREAD_STACK_CANARY 0xDEADBEEF
+
+#define SCHEDULER_SPINLOCK spinlock30
+#define THREAD_SPINLOCK spinlock29
+#define DEFERRED_TASKS_SPINLOCK spinlock28
 
 static duration_t const scheduler_task_quantum = DURATION_INITIALIZER(10, MILLISECONDS);
 
@@ -82,7 +104,7 @@ void scheduler_sys_tick_handler(void)
     if (CPU_IS_CORE_0)
     {
       scheduler_tick++;
-      WITH_SPINLOCK(deferred_tasks_spinlock)
+      WITH_SPINLOCK(DEFERRED_TASKS_SPINLOCK)
       {
         if (!sorted_list_is_empty(&deferred_tasks_queue))
         {
@@ -95,7 +117,7 @@ void scheduler_sys_tick_handler(void)
       }
     }
   }
-  WITH_SPINLOCK(scheduler_spinlock)
+  WITH_SPINLOCK(SCHEDULER_SPINLOCK)
   {
     if (!list_is_empty(&ready_queue) && (scheduler_timestamp_is_expired(current_thread[CPUID]->deadline) || (current_thread[CPUID] == &idle_thread[CPUID])))
     {
@@ -113,7 +135,7 @@ __attribute__((used)) static void scheduler_save_current_sp(uint32_t* sp)
 __attribute__((used)) static thread_t* scheduler_pick_next_thread(void)
 {
   thread_t* next = NULL;
-  WITH_SPINLOCK(scheduler_spinlock)
+  WITH_SPINLOCK(SCHEDULER_SPINLOCK)
   {
     next = list_is_empty(&ready_queue) ? &idle_thread[CPUID] : CONTAINER_OF(list_pop(&ready_queue), thread_t, scheduler_node);
   }
@@ -284,7 +306,7 @@ void scheduler_thread_start(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(SCHEDULER_SPINLOCK)
     {
       ATOM_ASSERT(thread->state == THREAD_READY, "Only ready threads can be started");
       if (thread != &idle_thread[CPUID])
@@ -299,7 +321,7 @@ void scheduler_thread_resume(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(SCHEDULER_SPINLOCK)
     {
       switch (thread->state)
       {
@@ -323,7 +345,7 @@ void scheduler_thread_return_current_to_queue()
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(SCHEDULER_SPINLOCK)
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_READY;
@@ -336,7 +358,7 @@ void scheduler_thread_block_current()
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(SCHEDULER_SPINLOCK)
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_BLOCKED;
@@ -349,7 +371,7 @@ void scheduler_thread_block_current_on(list_t* wait_queue, spinlock_t* guarded_b
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(SCHEDULER_SPINLOCK)
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_BLOCKED;
@@ -380,7 +402,7 @@ void scheduler_thread_sleep_current(duration_t const duration)
   WITH_INTERRUPTS_DISABLED
   {
     thread_t* thread = scheduler_current_running_thread();
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(SCHEDULER_SPINLOCK)
     {
       thread->state = THREAD_SLEEPING;
     }
@@ -394,7 +416,7 @@ void scheduler_thread_terminate_current(void* retval)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(thread_spinlock)
+    WITH_SPINLOCK(THREAD_SPINLOCK)
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->retval = retval;
@@ -402,7 +424,7 @@ void scheduler_thread_terminate_current(void* retval)
 
       while (!list_is_empty(&thread->waiters))
       {
-        thread_t* waiter = CONTAINER_OF(list_pop(&thread->waiters), thread_t, scheduler_node);
+        thread_t* const waiter = CONTAINER_OF(list_pop(&thread->waiters), thread_t, scheduler_node);
         scheduler_thread_resume(waiter);
       }
     }
@@ -416,13 +438,13 @@ void* scheduler_thread_join(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    spinlock_lock(thread_spinlock);
+    spinlock_lock(THREAD_SPINLOCK);
     if (thread->state == THREAD_TERMINATED)
     {
-      spinlock_unlock(thread_spinlock);
+      spinlock_unlock(THREAD_SPINLOCK);
       return thread->retval;
     }
-    scheduler_thread_block_current_on(&thread->waiters, thread_spinlock);
+    scheduler_thread_block_current_on(&thread->waiters, THREAD_SPINLOCK);
   }
   return thread->retval;
 }
@@ -440,7 +462,7 @@ void scheduler_task_schedule(deferred_task_t* deferred_task)
       deferred_task->scheduler_node = LIST_NODE_INITIALIZER;
       deferred_task->state = DEFERRED_TASK_SCHEDULED;
       deferred_task->deadline = scheduler_timestamp_add(scheduler_timestamp_now(), deferred_task->initial_delay);
-      WITH_SPINLOCK(deferred_tasks_spinlock)
+      WITH_SPINLOCK(DEFERRED_TASKS_SPINLOCK)
       {
         ATOM_ASSERT(deferred_task->scheduler_node.next == NULL && deferred_task->scheduler_node.previous == NULL, "Deferred task already linked");
         sorted_list_add(&deferred_tasks_queue, &deferred_task->scheduler_node);
@@ -485,7 +507,7 @@ static __attribute__((noreturn)) void* deferred_task_manager(void* const arg)
     list_t expired_tasks = LIST_INITIALIZER;
     WITH_INTERRUPTS_DISABLED
     {
-      WITH_SPINLOCK(deferred_tasks_spinlock)
+      WITH_SPINLOCK(DEFERRED_TASKS_SPINLOCK)
       {
         while (!sorted_list_is_empty(&deferred_tasks_queue))
         {
@@ -495,13 +517,13 @@ static __attribute__((noreturn)) void* deferred_task_manager(void* const arg)
             break;
           }
           sorted_list_remove(&deferred_tasks_queue, &deferred_task->scheduler_node);
-          list_push((list_t*)&expired_tasks, &deferred_task->scheduler_node);
+          list_push(&expired_tasks, &deferred_task->scheduler_node);
         }
       }
     }
-    while (!list_is_empty((list_t*)&expired_tasks))
+    while (!list_is_empty(&expired_tasks))
     {
-      deferred_task_t* deferred_task = CONTAINER_OF(list_pop((list_t*)&expired_tasks), deferred_task_t, scheduler_node);
+      deferred_task_t* const deferred_task = CONTAINER_OF(list_pop(&expired_tasks), deferred_task_t, scheduler_node);
       WITH_MUTEX(&deferred_task->mutex)
       {
         if (deferred_task->state != DEFERRED_TASK_SCHEDULED)
@@ -519,7 +541,7 @@ static __attribute__((noreturn)) void* deferred_task_manager(void* const arg)
         }
         else if (deferred_task_is_periodic(deferred_task))
         {
-          WITH_SPINLOCK(deferred_tasks_spinlock)
+          WITH_SPINLOCK(DEFERRED_TASKS_SPINLOCK)
           {
             deferred_task->state = DEFERRED_TASK_SCHEDULED;
             deferred_task->deadline = scheduler_timestamp_add(deferred_task->deadline, deferred_task->period);
@@ -620,7 +642,7 @@ void scheduler_init(void)
   {
     scheduler_thread_init_bootstrap(&idle_thread[CPUID], idle_thread_stack[CPUID], IDLE_THREAD_STACK_SIZE);
     __asm__ volatile("MSR PSP, %0" :: "r"(current_thread[CPUID]->sp) : "memory");
-    stack_set_mode(STACK_MODE_PSP);
+    cpu_stack_set_mode(STACK_MODE_PSP);
   }
   scheduler_init_hardware();
   if (CPU_IS_CORE_0)
@@ -659,3 +681,7 @@ static void scheduler_boot_core_1(void)
     }
   }
 }
+
+#undef DEFERRED_TASKS_SPINLOCK
+#undef THREAD_SPINLOCK
+#undef SCHEDULER_SPINLOCK

@@ -1144,7 +1144,7 @@ EXAMPLE_RECURSIVE      = NO
 # that contain images that are to be included in the documentation (see the
 # \image command).
 
-IMAGE_PATH             = @CMAKE_SOURCE_DIR@/doc/img
+IMAGE_PATH             = @CMAKE_SOURCE_DIR@/doc/template/img
 
 # The INPUT_FILTER tag can be used to specify a program that Doxygen should
 # invoke to filter for each input file. Doxygen will invoke the filter program
@@ -1414,7 +1414,7 @@ HTML_FILE_EXTENSION    = .html
 # of the possible markers and block names see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_HEADER            = @CMAKE_SOURCE_DIR@/doc/header.html
+HTML_HEADER            = @CMAKE_SOURCE_DIR@/doc/template/header.html
 
 # The HTML_FOOTER tag can be used to specify a user-defined HTML footer for each
 # generated HTML page. If the tag is left blank Doxygen will generate a standard
@@ -1454,12 +1454,12 @@ HTML_STYLESHEET        =
 # documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  = @CMAKE_SOURCE_DIR@/doc/doxygen-awesome.css \
-                         @CMAKE_SOURCE_DIR@/doc/custom.css \
-                         @CMAKE_SOURCE_DIR@/doc/doxygen-awesome-sidebar-only.css \
-                         @CMAKE_SOURCE_DIR@/doc/doxygen-awesome-sidebar-only-darkmode-toggle.css \
-                         @CMAKE_SOURCE_DIR@/doc/theme-round.css \
-                         @CMAKE_SOURCE_DIR@/doc/theme-robot.css
+HTML_EXTRA_STYLESHEET  = @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome.css \
+                         @CMAKE_SOURCE_DIR@/doc/template/custom.css \
+                         @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome-sidebar-only.css \
+                         @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome-sidebar-only-darkmode-toggle.css \
+                         @CMAKE_SOURCE_DIR@/doc/template/theme-round.css \
+                         @CMAKE_SOURCE_DIR@/doc/template/theme-robot.css
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1469,12 +1469,12 @@ HTML_EXTRA_STYLESHEET  = @CMAKE_SOURCE_DIR@/doc/doxygen-awesome.css \
 # files will be copied as-is; there are no commands or markers available.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_FILES       = @CMAKE_SOURCE_DIR@/doc/doxygen-awesome-darkmode-toggle.js \
-                         @CMAKE_SOURCE_DIR@/doc/doxygen-awesome-fragment-copy-button.js \
-                         @CMAKE_SOURCE_DIR@/doc/doxygen-awesome-paragraph-link.js \
-                         @CMAKE_SOURCE_DIR@/doc/toggle-alternative-theme.js \
-                         @CMAKE_SOURCE_DIR@/doc/doxygen-awesome-interactive-toc.js \
-                         @CMAKE_SOURCE_DIR@/doc/doxygen-awesome-tabs.js
+HTML_EXTRA_FILES       = @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome-darkmode-toggle.js \
+                         @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome-fragment-copy-button.js \
+                         @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome-paragraph-link.js \
+                         @CMAKE_SOURCE_DIR@/doc/template/toggle-alternative-theme.js \
+                         @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome-interactive-toc.js \
+                         @CMAKE_SOURCE_DIR@/doc/template/doxygen-awesome-tabs.js
 
 # The HTML_COLORSTYLE tag can be used to specify if the generated HTML output
 # should be rendered with a dark or light theme.

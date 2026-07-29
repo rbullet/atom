@@ -5,9 +5,18 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "rp2040/base.h"
-#include "rp2040/rp2040.h"
 #include "util/helpers.h"
+
+// --- SIO peripheral registers (from RP2040 SVD) ---
+#define SIO_BASE 0XD0000000
+#define SIO_CPUID_OFFSET 0X0000
+#define SIO_FIFO_ST_OFFSET 0X0050
+#define SIO_FIFO_ST_VLD_MASK 0X1
+#define SIO_FIFO_ST_VLD_OFFSET 0
+#define SIO_FIFO_ST_RDY_MASK 0X2
+#define SIO_FIFO_ST_RDY_OFFSET 1
+#define SIO_FIFO_RD_OFFSET 0X0058
+#define SIO_FIFO_WR_OFFSET 0X0054
 
 #define SIO_FIFO_ST     ((volatile uint32_t*)(SIO_BASE + SIO_FIFO_ST_OFFSET))
 #define SIO_FIFO_RD     ((volatile uint32_t*)(SIO_BASE + SIO_FIFO_RD_OFFSET))
@@ -17,6 +26,50 @@ extern "C" {
 #define CPUID           (*((volatile uint32_t*)(SIO_BASE + SIO_CPUID_OFFSET)))
 #define CPU_IS_CORE_0   (CPUID == 0)   // Check if running on core 0
 #define CPU_IS_CORE_1   (CPUID == 1)   // Check if running on core 1
+
+// --- CONTROL register bit definitions ---
+#define CPU_CONTROL_SPSEL_BIT 1
+
+// --- Stack mode selection ---
+typedef enum
+{
+  STACK_MODE_MSP = 0U, ///< Main Stack Pointer
+  STACK_MODE_PSP = 1U ///< Process Stack Pointer
+} stack_mode_enum;
+
+// --- Send Event (wake other cores) ---
+__attribute__((always_inline)) static inline void sev(void)
+{
+  __asm__ volatile("sev" ::: "memory");
+}
+
+// --- Wait For Event (low-power sleep until event) ---
+__attribute__((always_inline)) static inline void wfe(void)
+{
+  __asm__ volatile("wfe" ::: "memory");
+}
+
+// --- Wait For Interrupt (low-power sleep until interrupt) ---
+__attribute__((always_inline)) static inline void wfi(void)
+{
+  __asm__ volatile("wfi" ::: "memory");
+}
+
+// --- Read CONTROL register ---
+static __attribute__((always_inline)) inline uint32_t cpu_control(void)
+{
+  uint32_t value;
+  __asm__ volatile("mrs %0, control" : "=r"(value));
+  return value;
+}
+
+// --- Set stack pointer mode (MSP/PSP) ---
+static __attribute__((always_inline)) inline void cpu_stack_set_mode(stack_mode_enum mode)
+{
+  uint32_t const old_value = cpu_control();
+  uint32_t const new_value = (old_value & ~(1u << CPU_CONTROL_SPSEL_BIT)) | (mode << CPU_CONTROL_SPSEL_BIT);
+  __asm__ volatile("msr control, %0" :: "r"(new_value) : "memory");
+}
 
 // --- CPU FIFO status helpers ---
 static inline bool cpu_fifo_is_readable(void)
@@ -40,7 +93,7 @@ static inline uint32_t cpu_fifo_read(void)
 }
 
 // --- CPU FIFO blocking write ---
-static inline void cpu_fifo_write(uint32_t value)
+static inline void cpu_fifo_write(uint32_t const value)
 {
   while (!cpu_fifo_is_writable())
   {
@@ -63,7 +116,7 @@ static inline bool cpu_fifo_try_read(uint32_t* value)
 }
 
 // --- CPU FIFO non-blocking try write ---
-static inline bool cpu_fifo_try_write(uint32_t value)
+static inline bool cpu_fifo_try_write(uint32_t const value)
 {
   if (!cpu_fifo_is_writable())
   {

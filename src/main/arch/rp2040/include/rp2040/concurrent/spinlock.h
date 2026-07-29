@@ -1,48 +1,132 @@
 #pragma once
+
+/**
+ * @file spinlock.h
+ * @brief RP2040 hardware spinlock definitions.
+ *
+ * This private header exposes the RP2040 hardware spinlock registers used by
+ * the ATOM RP2040 port. These symbols are intended exclusively for internal
+ * use by the RP2040 architecture implementation and are not part of the
+ * public ATOM API.
+ *
+ * Hardware spinlocks may be reserved by ATOM subsystems to provide efficient
+ * mutual exclusion between CPU cores. Reserved spinlocks must not be reused
+ * outside of their designated subsystem.
+ */
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <stdint.h>
-#include <stdbool.h>
-#include "rp2040/rp2040.h"
 #include "concurrent/spinlock.h"
 
-// --- RP2040 hardware spinlocks ---
-#define spinlock0    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK0_OFFSET))
-#define spinlock1    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK1_OFFSET))
-#define spinlock2    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK2_OFFSET))
-#define spinlock3    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK3_OFFSET))
-#define spinlock4    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK4_OFFSET))
-#define spinlock5    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK5_OFFSET))
-#define spinlock6    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK6_OFFSET))
-#define spinlock7    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK7_OFFSET))
-#define spinlock8    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK8_OFFSET))
-#define spinlock9    ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK9_OFFSET))
-#define spinlock10   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK10_OFFSET))
-#define spinlock11   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK11_OFFSET))
-#define spinlock12   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK12_OFFSET))
-#define spinlock13   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK13_OFFSET))
-#define spinlock14   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK14_OFFSET))
-#define spinlock15   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK15_OFFSET))
-#define spinlock16   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK16_OFFSET))
-#define spinlock17   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK17_OFFSET))
-#define spinlock18   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK18_OFFSET))
-#define spinlock19   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK19_OFFSET))
-#define spinlock20   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK20_OFFSET))
-#define spinlock21   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK21_OFFSET))
-#define spinlock22   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK22_OFFSET))
-#define spinlock23   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK23_OFFSET))
-#define spinlock24   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK24_OFFSET))
-#define spinlock25   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK25_OFFSET))
-#define spinlock26   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK26_OFFSET))
-#define spinlock27   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK27_OFFSET))
-#define spinlock28   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK28_OFFSET))
-#define spinlock29   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK29_OFFSET))
-#define spinlock30   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK30_OFFSET))
-#define spinlock31   ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK31_OFFSET))
+/** @name RP2040 hardware spinlocks
+ *
+ * Hardware spinlock registers provided by the RP2040 SIO peripheral.
+ *
+ * Spinlocks 0-24 are currently available for general internal use by the
+ * RP2040 port. Spinlocks 25-31 are reserved by ATOM subsystems.
+ *
+ * @{
+ */
 
-/** @endcond */
+/** @brief Hardware spinlock 0. */
+extern spinlock_t* const spinlock0;
+
+/** @brief Hardware spinlock 1. */
+extern spinlock_t* const spinlock1;
+
+/** @brief Hardware spinlock 2. */
+extern spinlock_t* const spinlock2;
+
+/** @brief Hardware spinlock 3. */
+extern spinlock_t* const spinlock3;
+
+/** @brief Hardware spinlock 4. */
+extern spinlock_t* const spinlock4;
+
+/** @brief Hardware spinlock 5. */
+extern spinlock_t* const spinlock5;
+
+/** @brief Hardware spinlock 6. */
+extern spinlock_t* const spinlock6;
+
+/** @brief Hardware spinlock 7. */
+extern spinlock_t* const spinlock7;
+
+/** @brief Hardware spinlock 8. */
+extern spinlock_t* const spinlock8;
+
+/** @brief Hardware spinlock 9. */
+extern spinlock_t* const spinlock9;
+
+/** @brief Hardware spinlock 10. */
+extern spinlock_t* const spinlock10;
+
+/** @brief Hardware spinlock 11. */
+extern spinlock_t* const spinlock11;
+
+/** @brief Hardware spinlock 12. */
+extern spinlock_t* const spinlock12;
+
+/** @brief Hardware spinlock 13. */
+extern spinlock_t* const spinlock13;
+
+/** @brief Hardware spinlock 14. */
+extern spinlock_t* const spinlock14;
+
+/** @brief Hardware spinlock 15. */
+extern spinlock_t* const spinlock15;
+
+/** @brief Hardware spinlock 16. */
+extern spinlock_t* const spinlock16;
+
+/** @brief Hardware spinlock 17. */
+extern spinlock_t* const spinlock17;
+
+/** @brief Hardware spinlock 18. */
+extern spinlock_t* const spinlock18;
+
+/** @brief Hardware spinlock 19. */
+extern spinlock_t* const spinlock19;
+
+/** @brief Hardware spinlock 20. */
+extern spinlock_t* const spinlock20;
+
+/** @brief Hardware spinlock 21. */
+extern spinlock_t* const spinlock21;
+
+/** @brief Hardware spinlock 22. */
+extern spinlock_t* const spinlock22;
+
+/** @brief Hardware spinlock 23. */
+extern spinlock_t* const spinlock23;
+
+/** @brief Hardware spinlock 24. */
+extern spinlock_t* const spinlock24;
+
+/** @brief Reserved for the condition variable subsystem. */
+extern spinlock_t* const spinlock25;
+
+/** @brief Reserved for the semaphore subsystem. */
+extern spinlock_t* const spinlock26;
+
+/** @brief Reserved for the mutex subsystem. */
+extern spinlock_t* const spinlock27;
+
+/** @brief Reserved for the deferred task subsystem. */
+extern spinlock_t* const spinlock28;
+
+/** @brief Reserved for the thread subsystem. */
+extern spinlock_t* const spinlock29;
+
+/** @brief Reserved for the scheduler subsystem. */
+extern spinlock_t* const spinlock30;
+
+/** @brief Reserved for the memory allocator. */
+extern spinlock_t* const spinlock31;
+
+/** @} */
 
 #ifdef __cplusplus
 }

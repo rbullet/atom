@@ -3,7 +3,6 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
 #include <stdint.h>
 
 /**
@@ -57,9 +56,15 @@ typedef enum
 /**
  * @brief Initialize the GPIO subsystem.
  *
- * Must be called before any other GPIO function.
+ * Resets the IO and pad control banks used by GPIO pins.
  *
- * @note Must be called once during system initialization.
+ * @note Already invoked once during board/system initialization, before
+ *       `main()` runs. Application code should not normally call this
+ *       function itself.
+ *
+ * @warning Calling this again after startup resets IO_BANK0/PADS_BANK0 and
+ *          will discard any pin configuration performed since boot,
+ *          including peripheral pin muxing (e.g. UART TX/RX pins).
  */
 void gpio_init(void);
 
@@ -72,7 +77,6 @@ void gpio_init(void);
  * @param dir Pin direction.
  * @param pull Pull-resistor configuration.
  *
- * @pre gpio_init() must have been called.
  * @pre pin must be a valid GPIO pin number for the platform.
  */
 void gpio_config(uint32_t pin, gpio_dir_t dir, gpio_pull_t pull);
@@ -83,7 +87,6 @@ void gpio_config(uint32_t pin, gpio_dir_t dir, gpio_pull_t pull);
  * @param pin GPIO pin number.
  * @return Current logic level.
  *
- * @pre gpio_init() must have been called.
  * @pre pin must be a valid GPIO pin number for the platform.
  */
 gpio_level_t gpio_read(uint32_t pin);
@@ -94,7 +97,6 @@ gpio_level_t gpio_read(uint32_t pin);
  * @param pin GPIO pin number.
  * @param level Logic level to set.
  *
- * @pre gpio_init() must have been called.
  * @pre pin must be configured as GPIO_DIR_OUTPUT.
  */
 void gpio_write(uint32_t pin, gpio_level_t level);
@@ -104,7 +106,6 @@ void gpio_write(uint32_t pin, gpio_level_t level);
  *
  * @param pin GPIO pin number.
  *
- * @pre gpio_init() must have been called.
  * @pre pin must be configured as GPIO_DIR_OUTPUT.
  */
 void gpio_toggle(uint32_t pin);

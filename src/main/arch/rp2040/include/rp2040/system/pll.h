@@ -5,23 +5,31 @@ extern "C" {
 
 #include <stdint.h>
 #include <stdbool.h>
-#include "rp2040/config.h"
 #include "util/helpers.h"
 
 #define PLL_SYS_BASE 0X40028000
 #define PLL_USB_BASE 0X4002C000
 
 #define PLL_SYS_CS_OFFSET 0X0000
+#define PLL_SYS_CS_LOCK_MASK 0X80000000
+#define PLL_SYS_CS_LOCK_OFFSET 31
+#define PLL_SYS_CS_REFDIV_MASK 0X3F
+#define PLL_SYS_CS_REFDIV_OFFSET 0
 #define PLL_SYS_FBDIV_INT_OFFSET 0X0008
+#define PLL_SYS_FBDIV_INT_FBDIV_INT_MASK 0XFFF
+#define PLL_SYS_FBDIV_INT_FBDIV_INT_OFFSET 0
 #define PLL_SYS_PRIM_OFFSET 0X000C
+#define PLL_SYS_PRIM_POSTDIV1_MASK 0X70000
+#define PLL_SYS_PRIM_POSTDIV1_OFFSET 16
+#define PLL_SYS_PRIM_POSTDIV2_MASK 0X7000
+#define PLL_SYS_PRIM_POSTDIV2_OFFSET 12
 #define PLL_SYS_PWR_OFFSET 0X0004
 
 
 typedef volatile struct pll_t pll_t;
 
-pll_t* const pll_sys =  ((pll_t*)PLL_SYS_BASE);
-pll_t* const pll_usb =  ((pll_t*)PLL_USB_BASE);
-
+extern pll_t* const pll_sys;
+extern pll_t* const pll_usb;
 
 #define PLL_SYS ((pll_t*)PLL_SYS_BASE)
 #define PLL_USB ((pll_t*)PLL_USB_BASE)
@@ -89,7 +97,7 @@ static inline uint32_t pll_get_postdiv1(pll_t const* pll)
 }
 
 // --- Set PLL post divider 1 ---
-static inline void pll_set_postdiv1(pll_t* pll, uint32_t postdiv1)
+static inline void pll_set_postdiv1(pll_t* pll, uint32_t const postdiv1)
 {
   REG_SET_FIELD(PLL_PRIM(pll), PLL_SYS_PRIM_POSTDIV1, postdiv1);
 }
@@ -101,68 +109,25 @@ static inline uint32_t pll_get_postdiv2(pll_t* pll)
 }
 
 // --- Set PLL post divider 2 ---
-static inline void pll_set_postdiv2(pll_t* pll, uint32_t postdiv2)
+static inline void pll_set_postdiv2(pll_t* pll, uint32_t const postdiv2)
 {
   REG_SET_FIELD(PLL_PRIM(pll), PLL_SYS_PRIM_POSTDIV2, postdiv2);
 }
 
 // --- Disable specific PLL power mode(s) ---
-static inline void pll_disable_pwr_mode(pll_t* pll, uint32_t pll_pwr_mode)
+static inline void pll_disable_pwr_mode(pll_t* pll, uint32_t const pll_pwr_mode)
 {
   PLL_PWR(pll) |= (pll_pwr_mode & PLL_PWR_MASK);
 }
 
 // --- Enable specific PLL power mode(s) ---
-static inline void pll_enable_pwr_mode(pll_t* pll, uint32_t pll_pwr_mode)
+static inline void pll_enable_pwr_mode(pll_t* pll, uint32_t const pll_pwr_mode)
 {
   PLL_PWR(pll) &= ~(pll_pwr_mode & PLL_PWR_MASK);
 }
 
 // --- Compute PLL settings for target frequency ---
-static inline pll_settings_t pll_compute_settings(uint32_t const f_target)
-{
-  pll_settings_t best = {.fbdiv = 0, .post_div1 = 0, .post_div2 = 0, .refdiv = 0, .achieved_freq = 0};
-  uint32_t best_error = 0xFFFFFFFF;
-
-  const uint8_t refdiv_min = 1;
-  const uint8_t refdiv_max = 63; // RP2040 max refdiv
-
-  for (uint8_t refdiv = refdiv_min; refdiv <= refdiv_max; ++refdiv)
-  {
-    const uint8_t post_div_min = 1;
-    const uint8_t post_div_max = 7;
-
-    for (uint8_t pd1 = post_div_min; pd1 <= post_div_max; ++pd1)
-    {
-      for (uint8_t pd2 = post_div_min; pd2 <= post_div_max; ++pd2)
-      {
-        const uint16_t fbdiv_min = 16;
-        const uint16_t fbdiv_max = 320;
-        const uint32_t numerator = f_target * pd1 * pd2 * refdiv;
-        const uint32_t fbdiv = (numerator + XOSC_FREQUENCY_HZ / 2) / XOSC_FREQUENCY_HZ;
-
-        if (fbdiv < fbdiv_min || fbdiv > fbdiv_max) continue;
-
-        const uint32_t f_actual = (XOSC_FREQUENCY_HZ * fbdiv) / (uint32_t)(refdiv * pd1 * pd2);
-        const uint32_t error = (f_actual > f_target) ? (f_actual - f_target) : (f_target - f_actual);
-
-        if (error < best_error)
-        {
-          best_error = error;
-          best.fbdiv = (uint16_t)fbdiv;
-          best.post_div1 = pd1;
-          best.post_div2 = pd2;
-          best.refdiv = refdiv;
-          best.achieved_freq = f_actual;
-
-          if (error == 0) return best; // perfect match
-        }
-      }
-    }
-  }
-
-  return best;
-}
+pll_settings_t pll_compute_settings(uint32_t f_target);
 
 #ifdef __cplusplus
 }

@@ -5,7 +5,6 @@ extern "C" {
 #endif
 
 #include <stdbool.h>
-#include "util/assert.h"
 #include <stddef.h>
 
 /**
@@ -209,7 +208,6 @@ static inline void list_remove(list_t* list, list_node_t* node)
  */
 static inline list_node_t* list_pop(list_t* list)
 {
-  ATOM_ASSERT(list != NULL, "List is not null NULL");
   list_node_t* node = list->head;
 
   if (node == NULL)

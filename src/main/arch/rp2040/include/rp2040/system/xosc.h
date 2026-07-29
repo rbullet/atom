@@ -5,9 +5,26 @@ extern "C" {
 
 #include <stdbool.h>
 #include <stdint.h>
-#include "rp2040/rp2040.h"
 #include "util/helpers.h"
 
+// --- XOSC peripheral registers (from RP2040 SVD) ---
+#define XOSC_BASE 0X40024000
+#define XOSC_STATUS_OFFSET 0X0004
+#define XOSC_STATUS_BADWRITE_MASK 0X1000000
+#define XOSC_STATUS_BADWRITE_OFFSET 24
+#define XOSC_STATUS_STABLE_MASK 0X80000000
+#define XOSC_STATUS_STABLE_OFFSET 31
+#define XOSC_CTRL_OFFSET 0X0000
+#define XOSC_CTRL_FREQ_RANGE_MASK 0XFFF
+#define XOSC_CTRL_FREQ_RANGE_OFFSET 0
+#define XOSC_CTRL_ENABLE_MASK 0XFFF000
+#define XOSC_CTRL_ENABLE_OFFSET 12
+#define XOSC_STARTUP_OFFSET 0X000C
+#define XOSC_STARTUP_DELAY_MASK 0X3FFF
+#define XOSC_STARTUP_DELAY_OFFSET 0
+#define XOSC_DORMANT_OFFSET 0X0008
+
+#define XOSC_FREQUENCY_HZ 12000000
 #define XOSC_STATUS     ((volatile uint32_t*)(XOSC_BASE + XOSC_STATUS_OFFSET))
 #define XOSC_CTRL       ((volatile uint32_t*)(XOSC_BASE + XOSC_CTRL_OFFSET))
 #define XOSC_STARTUP    ((volatile uint32_t*)(XOSC_BASE + XOSC_STARTUP_OFFSET))
@@ -76,7 +93,7 @@ static inline xosc_startup_delay_enum xosc_get_startup_delay()
 }
 
 // --- Set startup delay for XOSC ---
-static inline void xosc_set_startup_delay(xosc_startup_delay_enum delay)
+static inline void xosc_set_startup_delay(xosc_startup_delay_enum const delay)
 {
   REG_SET_FIELD(*XOSC_STARTUP, XOSC_STARTUP_DELAY, delay);
 }

@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include <string.h>
+#include <unistd.h>
 #include "rp2040/system/cpu.h"
 
 // --- Linker-defined symbols ---
@@ -10,17 +11,20 @@ extern uint32_t const _sbss;
 extern uint32_t const _ebss;
 extern uint32_t const _estack0;
 
-// --- External functions ---
-void board_init(void);
-void __libc_init_array(void);
-int main(void);
-void __libc_fini_array(void);
-__attribute__((noreturn)) void _exit(int status);
+// newlib
+extern void __libc_init_array(void);
+extern void __libc_fini_array(void);
+
+// atom
+extern void board_init(void);
+
+// application entry point
+extern int main(void);
 
 static __attribute__((always_inline)) inline void startup_init_stack(void const* stack_top)
 {
   __asm__ volatile("msr psp, %0" :: "r"(stack_top) : "memory");
-  stack_set_mode(STACK_MODE_PSP);
+  cpu_stack_set_mode(STACK_MODE_PSP);
 }
 
 // --- Copy initialized data from flash to RAM ---

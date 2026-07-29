@@ -11,11 +11,11 @@ on resource-constrained microcontrollers.
 
 The project focuses on:
 
+- Simple APIs inspired by higher-level environments
 - Small and readable implementation
+- True dual-core scheduling
 - Explicit resource ownership
 - No kernel dynamic allocation
-- True dual-core scheduling
-- Simple APIs inspired by higher-level environments
 
 ---
 
@@ -43,12 +43,12 @@ synchronization, and multicore execution on microcontrollers.
 
 ## Highlights
 
+- Small, readable implementation
 - True dual-core SMP scheduler
 - No kernel dynamic allocation
 - `main()` is the first scheduled thread
 - Configurable CPU frequency
 - Pluggable timestamp implementation
-- Small, readable implementation
 - Integrated C runtime support with `printf()` output through UART0 by default
 
 ## Design Goals
@@ -74,12 +74,15 @@ synchronization, and multicore execution on microcontrollers.
 ## Concurrency
 
 - Threads
+- Thread wait / notify
+- Thread join with return values
 - Recursive mutexes
 - Counting semaphores
 - Condition variables
 - Hardware spinlocks
 - Deferred tasks
 - Scoped interrupt masking
+- Scoped resource guards (mutex, semaphore, spinlock, interrupts)
 
 ## Drivers
 
@@ -92,8 +95,10 @@ synchronization, and multicore execution on microcontrollers.
 
 - Time abstractions
 - Linked lists
+- Sorted lists
 - Assertions
 - Helper macros
+- Configurable logging framework
 
 ---
 
@@ -160,6 +165,42 @@ int main(void)
 > `main()` is the application's initial thread. The scheduler is already running before
 > `main()` is entered, so there is no `scheduler_start()` function. Threads created with
 > `thread_start()` are scheduled automatically alongside the main thread.
+
+---
+
+# Scoped Resource Guards
+
+Mutexes, semaphores and interrupt masking all support a scoped, RAII-style
+block form that acquires the resource on entry and releases it automatically
+on exit, including early `return`:
+
+```c
+WITH_MUTEX(&resource_lock)
+{
+  update_shared_state();
+}
+
+WITH_SEMAPHORE(&pool_semaphore)
+{
+  use_pooled_resource();
+}
+
+WITH_INTERRUPTS_DISABLED
+{
+  critical_update();
+}
+```
+
+This avoids common bugs where an early `return` or exception path forgets to
+release a lock.
+
+`WITH_SPINLOCK(lock)` follows the same pattern, but is currently only usable
+internally: the public API exposes the `spinlock_t` type and the
+`spinlock_lock()` / `spinlock_unlock()` / `spinlock_try_lock()` functions, but
+no public constant refers to one of the RP2040's hardware spinlock slots —
+those are reserved for the kernel's own subsystems (scheduler, mutex,
+semaphore, condition variable, deferred tasks, allocator). Application code
+cannot yet obtain a hardware-backed spinlock of its own.
 
 ---
 
@@ -325,13 +366,17 @@ atom/
 
 | Primitive | Description |
 |------------|-------------|
-| Threads | Lightweight execution contexts |
+| Threads | Lightweight execution contexts, with wait/notify and join support |
 | Mutex | Recursive mutual exclusion |
 | Semaphore | Counting synchronization |
 | Condition Variable | Wait/signal synchronization |
-| Spinlock | Hardware-backed cross-core locking |
+| Spinlock | Hardware-backed cross-core locking (currently used internally by the kernel only; no public instance is exposed to applications) |
 | Deferred Task | Delayed or periodic callbacks |
 | Interrupt Control | Scoped interrupt masking |
+| Scoped Guards | `WITH_MUTEX` / `WITH_SEMAPHORE` / `WITH_INTERRUPTS_DISABLED` blocks |
+
+Non-blocking variants are available for contended resources
+(`mutex_try_lock()`, `semaphore_try_acquire()`).
 
 ---
 
@@ -343,13 +388,31 @@ atom/
 - Pull-up/down
 - Read/write
 - Toggle
+- Safe to call from any execution context, including interrupts
+- `gpio_init()` is invoked automatically during board initialization;
+  application code does not need to (and should not) call it again, since
+  doing so would reset pin muxing already set up for other peripherals (e.g.
+  UART TX/RX)
 
 ## UART
 
 - UART0
 - UART1
 - Configurable baud rate
-- Blocking API
+- Blocking API only (no interrupt-driven/async I/O)
+
+## Logging
+
+- Severity levels: `FATAL`, `ERROR`, `WARN`, `INFO`, `DEBUG`
+- Pluggable message formatter (`log_set_printer()`)
+- Redirectable output stream, defaults to `stdout` (`log_set_output()`)
+- Runtime-configurable minimum level (`log_set_min_level()`)
+- Safe to call from thread or interrupt context
+
+```c
+log_set_min_level(LOG_LEVEL_INFO);
+log_info("System initialized with version %d", version);
+```
 
 ---
 
@@ -418,6 +481,17 @@ Example:
 set(CPU_FREQUENCY 125000000)
 ```
 
+## Default UART Baud Rate
+
+The default console baud rate is also a build-time setting, alongside
+`CPU_FREQUENCY`:
+
+```cmake
+set(UART_BAUD_RATE 115200)
+```
+
+Both values are generated into `atom_config.h` at configure time.
+
 ---
 
 # Limitations
@@ -430,6 +504,11 @@ Current limitations include:
 - No memory protection
 - No userspace/kernel separation
 - Application-managed thread stacks
+- Blocking-only UART driver (no interrupt-driven/async I/O)
+- `duration_t` uses `float`; the Cortex-M0+ has no hardware FPU, so duration
+  arithmetic is done in software
+- No public API to acquire an application-owned hardware spinlock; all 32
+  RP2040 spinlock slots are currently reserved for internal kernel use
 
 ---
 
@@ -441,8 +520,7 @@ Please:
 
 1. Fork the repository.
 2. Create a feature branch.
-3. Add tests where appropriate.
-4. Submit a pull request.
+3. Submit a pull request.
 
 ---
 
@@ -461,5 +539,5 @@ ATOM draws inspiration from established embedded kernels such as FreeRTOS and Ze
 # References
 
 - [RP2040 Datasheet](https://datasheets.raspberrypi.com/rp2040/rp2040-datasheet.pdf)
-- [ARM Cortex-M0+ Generic User Guide](https://developer.arm.com/documentation/du0621/latest/)
+- [ARM Cortex-M0+ Generic User Guide](https://support.arm.com/documentation/dui0662/b/)
 - [Raspberry Pi Pico Documentation](https://www.raspberrypi.com/documentation/microcontrollers/pico-series.html)
