@@ -1,0 +1,114 @@
+# =========================
+# Build directories
+# =========================
+build/
+cmake-build-*/
+out/
+
+# =========================
+# CMake generated files
+# =========================
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# CMake presets / IDE
+CMakeUserPresets.json
+
+# =========================
+# Object files / binaries
+# =========================
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+
+*.elf
+*.bin
+*.hex
+*.map
+*.uf2
+
+# =========================
+# Debug / profiling
+# =========================
+*.dSYM/
+*.gcda
+*.gcno
+*.gcov
+
+# =========================
+# IDE files
+# =========================
+
+# CLion
+.idea/
+*.iml
+
+# VS Code
+.vscode/
+
+# Eclipse
+.project
+.cproject
+.settings/
+
+# Visual Studio
+.vs/
+
+# =========================
+# Toolchain files
+# =========================
+*.log
+
+# =========================
+# OS generated files
+# =========================
+
+# Linux
+*~
+.directory
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+Desktop.ini
+
+# =========================
+# Temporary files
+# =========================
+*.tmp
+*.swp
+*.swo
+*.bak
+
+# =========================
+# Documentation generated output
+# =========================
+doc/html/
+doc/latex/
+
+# =========================
+# Python tools
+# =========================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+
+# =========================
+# Generated files
+# =========================
+# Uncomment if you generate these locally
+# generated/

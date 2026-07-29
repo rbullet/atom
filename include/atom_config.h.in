@@ -1,0 +1,4 @@
+#pragma once
+
+#define CPU_FREQUENCY_HZ @CPU_FREQUENCY@
+#define UART_BAUD_RATE @UART_BAUD_RATE@
