@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "atom.h"
+#include <atom.h>
 
 void* scheduler_test(void* arg)
 {

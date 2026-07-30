@@ -1,14 +1,9 @@
 #include <string.h>
-#include "atom_config.h"
-#include <rp2040/concurrent/interrupts.h>
-#include "concurrent/interrupts.h"
-#include "io/uart.h"
-#include "util/log.h"
-#include "rp2040/system/xosc.h"
-#include "rp2040/system/clocks.h"
-#include "rp2040/system/pll.h"
-#include "rp2040/system/resets.h"
+
+#include <atom.h>
+#include "rp2040/atom.h"
 #include "rp2040/io/gpio.h"
+#include "rp2040/concurrent/interrupts.h"
 #include "rp2040/concurrent/scheduler.h"
 #include "rp2040/concurrent/spinlock.h"
 

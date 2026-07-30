@@ -1,15 +1,10 @@
 #include <string.h>
 
-#include "atom_config.h"
-#include "util/assert.h"
-#include "util/helpers.h"
-#include "rp2040/system/cpu.h"
+#include "rp2040/atom.h"
 #include "rp2040/concurrent/deferred_task.h"
 #include "rp2040/concurrent/interrupts.h"
 #include "rp2040/concurrent/spinlock.h"
 #include "rp2040/concurrent/scheduler.h"
-#include "util/collection/list.h"
-#include "util/collection/sorted_list.h"
 
 // --- PPB peripheral registers (from RP2040 SVD) ---
 #define PPB_BASE 0XE0000000
@@ -632,6 +627,7 @@ __attribute__((noreturn)) static void scheduler_enter_idle(void)
 
 void scheduler_init(void)
 {
+  log_info("Initializing the scheduler...");
   if (CPU_IS_CORE_0)
   {
     scheduler_thread_init_bootstrap(&bootstrap_thread, (uint32_t*)&_sstack0, ((uintptr_t)&_estack0 - (uintptr_t)&_sstack0));
@@ -654,6 +650,7 @@ void scheduler_init(void)
   {
     scheduler_enter_idle();
   }
+  log_info("The scheduler is initialized.");
 }
 
 // --- Boot Core 1 ---

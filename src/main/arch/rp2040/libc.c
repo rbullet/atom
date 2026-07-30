@@ -3,7 +3,7 @@
 #include <sys/errno.h>
 #include <stdio.h>
 
-#include "atom.h"
+#include <atom.h>
 #include "rp2040/system/cpu.h"
 #include "rp2040/concurrent/spinlock.h"
 

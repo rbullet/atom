@@ -1,5 +1,6 @@
+#include <atom.h>
+
 #include "rp2040/concurrent/deferred_task.h"
-#include "concurrent/interrupts.h"
 #include "rp2040/concurrent/scheduler.h"
 
 static duration_t const one_shot = DURATION_INITIALIZER(0, MILLISECONDS);

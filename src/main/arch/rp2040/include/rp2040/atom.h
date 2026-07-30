@@ -28,8 +28,7 @@
 extern "C" {
 #endif
 
-#include "atom.h"
-
+#include <atom.h>
 
 #include "rp2040/system/clocks.h"
 #include "rp2040/system/cpu.h"

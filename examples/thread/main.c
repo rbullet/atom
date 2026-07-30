@@ -1,6 +1,6 @@
 #include <stdbool.h>
 
-#include "atom.h"
+#include <atom.h>
 
 #define LED_PIN 25
 

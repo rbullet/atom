@@ -1,7 +1,6 @@
 #include <stdlib.h>
 
-#include "concurrent/interrupts.h"
-#include "concurrent/semaphore.h"
+#include <atom.h>
 #include "rp2040/concurrent/spinlock.h"
 #include "rp2040/concurrent/scheduler.h"
 

@@ -106,7 +106,8 @@ synchronization, and multicore execution on microcontrollers.
 
 ```c
 #include <stdbool.h>
-#include "atom.h"
+
+#include <atom.h>
 
 #define LED_PIN 25
 
@@ -228,15 +229,27 @@ system and ATOM:
 
 ```c
 #include <stdio.h>
+#include <string.h>
+
+#define BUFFER_SIZE 128
 
 int main(void)
 {
-    char buffer[128];
+    char buffer[BUFFER_SIZE];
 
-    while (fgets(buffer, sizeof(buffer), stdin))
+    printf("Console echo ready.\r\n");
+
+    while (1)
     {
-        printf("echo: %s", buffer);
+        printf("> ");
+
+        if (fgets(buffer, sizeof(buffer), stdin) != NULL)
+        {
+            printf("echo: %s", buffer);
+        }
     }
+
+    return 0;
 }
 ```
 

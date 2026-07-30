@@ -1,4 +1,5 @@
 #include <stdbool.h>
+
 #include "rp2040/concurrent/spinlock.h"
 
 // --- SIO peripheral registers (from RP2040 SVD) ---

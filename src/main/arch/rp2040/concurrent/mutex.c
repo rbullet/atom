@@ -1,6 +1,6 @@
 #include <stdlib.h>
-#include "concurrent/mutex.h"
-#include "concurrent/interrupts.h"
+
+#include <atom.h>
 #include "rp2040/concurrent/spinlock.h"
 #include "rp2040/concurrent/scheduler.h"
 
