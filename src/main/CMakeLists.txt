@@ -1,52 +1,47 @@
-# ------------------------------------------------------------------------------
 # Global C settings
-# ------------------------------------------------------------------------------
 set(CMAKE_C_STANDARD 99)
-set(CMAKE_C_FLAGS_DEBUG "-O2 -g -DDEBUG")
+
+set(CMAKE_C_FLAGS_DEBUG "-Og -g -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-Os -flto")
 
-# ------------------------------------------------------------------------------
-# CPU & compiler options for RP2040
-# ------------------------------------------------------------------------------
-add_compile_options(
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
+        ${CMAKE_SOURCE_DIR}/lib
+)
+
+# ATOM library
+add_library(atom STATIC)
+
+
+target_sources(atom PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/util/log.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/util/assert.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/util/duration.c
+        ${CMAKE_CURRENT_SOURCE_DIR}/util/collection/sorted_list.c
+)
+
+
+# Public headers
+target_include_directories(atom PUBLIC
+        ${CMAKE_SOURCE_DIR}/include
+)
+
+# Compiler options
+target_compile_options(atom PRIVATE
         -fstrict-volatile-bitfields
         -ffunction-sections
         -fdata-sections
 
-        #-Werror
         -Wall
         -Wextra
         -Wcast-align
         -Wconversion
         -Wsign-conversion
         -Wshadow
-        -Wlogical-op
-        -Wsuggest-final-types
-        -Wsuggest-final-methods
+
         -ffreestanding
 )
 
-# ------------------------------------------------------------------------------
-# Main executable
-# ------------------------------------------------------------------------------
-add_executable(${PROJECT_NAME}
-        ${CMAKE_SOURCE_DIR}/src/main/main.c
-        ${CMAKE_SOURCE_DIR}/src/main/util/log.c
-        ${CMAKE_SOURCE_DIR}/src/main/util/assert.c
-        ${CMAKE_SOURCE_DIR}/src/main/util/duration.c
-        ${CMAKE_SOURCE_DIR}/src/main/util/collection/sorted_list.c
+# Architecture
+add_subdirectory(
+        ${CMAKE_CURRENT_SOURCE_DIR}/arch/rp2040
 )
-
-# Include directories
-target_include_directories(${PROJECT_NAME} PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-)
-
-target_link_options(${PROJECT_NAME} PRIVATE
-        -Wl,-Map=${PROJECT_NAME}.map
-)
-
-# ------------------------------------------------------------------------------
-# Include RP2040 sources from child CMake
-# ------------------------------------------------------------------------------
-add_subdirectory(${CMAKE_SOURCE_DIR}/src/main/arch/rp2040)  # this sets RP2040_SOURCES variable
