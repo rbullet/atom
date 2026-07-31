@@ -4,8 +4,6 @@
 build/
 cmake-build-*/
 out/
-lib/
-bin/
 
 
 # =========================
@@ -116,3 +114,6 @@ venv/
 # Uncomment if you generate these locally
 # generated/
 /include/atom_config.h
+
+# Linker scripts generated from the architecture template.
+examples/*/linker.ld

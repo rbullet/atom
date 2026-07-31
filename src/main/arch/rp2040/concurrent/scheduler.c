@@ -644,7 +644,7 @@ void scheduler_init(void)
   if (CPU_IS_CORE_0)
   {
     scheduler_thread_start(&deferred_task_thread);
-    //scheduler_boot_core_1();
+    scheduler_boot_core_1();
   }
   else
   {

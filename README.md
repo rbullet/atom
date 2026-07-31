@@ -167,6 +167,10 @@ int main(void)
 > `main()` is entered, so there is no `scheduler_start()` function. Threads created with
 > `thread_start()` are scheduled automatically alongside the main thread.
 
+This example lives under `examples/thread`. The `examples/` directory contains
+other self-contained sample applications, such as `examples/stdin_stdout`,
+demonstrating the C runtime / `printf`-`fgets` console integration.
+
 ---
 
 # Scoped Resource Guards
@@ -293,12 +297,15 @@ an application-level feature.
 
 ## Build
 
+ATOM builds as a static library (`libatom.a`). Application executables (including
+the bundled examples) link against it.
+
 ```bash
 git clone https://github.com/<user>/atom
 cd atom
 
-mkdir build
-cd build
+mkdir cmake-build
+cd cmake-build
 
 cmake \
     -G Ninja \
@@ -308,22 +315,30 @@ cmake \
 ninja
 ```
 
-The generated executable is
+This produces the static library:
 
 ```
-atom
+build/libatom.a
 ```
 
-or
+along with any example executables (e.g. `stdin_stdout`, `thread`), which are
+placed under their respective `examples/<name>/build/` directories.
 
-```
-atom.elf
+To build your own application, link against `libatom.a` and add `include/` to
+your include path, in the same way the bundled examples do:
+
+```cmake
+target_link_libraries(my_app PRIVATE
+        "-Wl,--whole-archive"
+        atom
+        "-Wl,--no-whole-archive"
+)
 ```
 
-Create a UF2 image:
+Create a UF2 image from an example (or your own executable):
 
 ```bash
-../tools/elf2uf2 atom -o atom.uf2
+../tools/elf2uf2 examples/stdin_stdout/build/stdin_stdout -o stdin_stdout.uf2
 ```
 
 Copy the UF2 onto the Pico while it is in BOOTSEL mode.
@@ -379,10 +394,22 @@ atom/
 │   └── main/
 │       └── arch/rp2040/
 │
+├── examples/
+│   ├── stdin_stdout/
+│   └── thread/
+│
+├── build/
+│   └── libatom.a
+│
 ├── doc/
 ├── tools/
 └── CMakeLists.txt
 ```
+
+ATOM itself builds as a static library (`libatom.a`); the `examples/` directory
+contains standalone executables that link against it, and each is
+self-contained enough to be copied out and used as the starting point for a new
+project.
 
 ---
 

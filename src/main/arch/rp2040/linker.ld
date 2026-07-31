@@ -1,3 +1,14 @@
+/*
+ * ATOM RP2040 linker script.
+ *
+ * This file is copied automatically into examples/projects by CMake.
+ * The source of truth is:
+ *
+ * src/main/arch/rp2040/linker.ld
+ *
+ * Do not edit generated copies directly.
+ */
+
 /* --- RP2040 Minimal Linker Script --- */
 ENTRY(irq_handler_reset)
 

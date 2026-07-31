@@ -33,7 +33,6 @@ extern "C" {
 
 /**
  * @defgroup atom ATOM
- * @brief Lightweight embedded framework.
  *
  * ATOM provides a portable API for embedded systems including concurrency,
  * hardware abstraction, utility containers and time management.
