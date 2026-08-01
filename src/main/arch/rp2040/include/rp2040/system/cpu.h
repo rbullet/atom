@@ -1,9 +1,11 @@
 #pragma once
 #ifdef __cplusplus
 extern "C" {
+
 #endif
 
 #include <stdint.h>
+#include <stddef.h>
 #include <stdbool.h>
 #include "util/helpers.h"
 
@@ -82,25 +84,36 @@ static inline bool cpu_fifo_is_writable(void)
   return REG_GET_FIELD(*SIO_FIFO_ST, SIO_FIFO_ST_RDY);
 }
 
-// --- CPU FIFO blocking read ---
-static inline uint32_t cpu_fifo_read(void)
+// --- CPU FIFO blocking write ---
+static inline size_t cpu_fifo_write(uint32_t const* buffer, size_t const len)
 {
-  while (!cpu_fifo_is_readable())
+  for (size_t i = 0; i < len; i++)
   {
-    wfe();
+    while (!cpu_fifo_is_writable())
+    {
+      wfe();
+    }
+
+    *SIO_FIFO_WR = buffer[i];
+    sev();
   }
-  return *SIO_FIFO_RD;
+
+  return len;
 }
 
-// --- CPU FIFO blocking write ---
-static inline void cpu_fifo_write(uint32_t const value)
+// --- CPU FIFO blocking read ---
+static inline size_t cpu_fifo_read(uint32_t* buffer, size_t const len)
 {
-  while (!cpu_fifo_is_writable())
+  for (size_t i = 0; i < len; i++)
   {
-    wfe();
+    while (!cpu_fifo_is_readable())
+    {
+      wfe();
+    }
+    buffer[i] = *SIO_FIFO_RD;
+    sev();
   }
-  *SIO_FIFO_WR = value;
-  sev(); // Wake other core
+  return len;
 }
 
 // --- CPU FIFO non-blocking try read ---
@@ -137,6 +150,26 @@ static inline void cpu_fifo_flush(void)
     __asm volatile("nop");
   }
   sev();
+}
+
+static inline bool cpu_fifo_write_echoed(uint32_t const* buffer, size_t len)
+{
+  uint32_t echo;
+
+  cpu_fifo_flush();
+
+  for (size_t i = 0; i < len; i++)
+  {
+    cpu_fifo_write(&buffer[i], 1);
+    cpu_fifo_read(&echo, 1);
+
+    if (echo != buffer[i])
+    {
+      return false;
+    }
+  }
+
+  return true;
 }
 
 #ifdef __cplusplus

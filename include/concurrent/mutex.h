@@ -1,4 +1,5 @@
 #pragma once
+#include "spinlock.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -66,6 +67,7 @@ typedef struct thread_t thread_t;
  */
 typedef struct mutex_t
 {
+  spinlock_t* spinlock; ///< Lazily allocated internal spinlock managed by the spinlock pool.
   uint32_t count;       ///< Recursive acquisition depth.
   thread_t* owner;      ///< Thread currently owning the mutex.
   list_t waiters;       ///< Threads waiting to acquire the mutex.
@@ -77,6 +79,8 @@ typedef struct mutex_t
  *
  * Initializes a mutex in the unlocked state.
  *
+ * The internal spinlock is allocated automatically on first use.
+ *
  * Example:
  *
  * @code
@@ -85,6 +89,7 @@ typedef struct mutex_t
  */
 #define MUTEX_INITIALIZER \
   ((mutex_t){ \
+    .spinlock = NULL, \
     .count = 0, \
     .owner = NULL, \
     .waiters = LIST_INITIALIZER \

@@ -43,17 +43,29 @@ extern "C" {
  */
 typedef struct semaphore_t
 {
-  uint32_t permits;   ///< Number of available permits.
-  list_t waiters;     ///< Threads waiting for a permit.
+  spinlock_t* spinlock; ///< Spinlock used for protecting the semaphore state.
+  uint32_t permits;    ///< Number of available permits.
+  list_t waiters;      ///< Threads waiting for a permit.
 } semaphore_t;
 
+
+
 /**
- * @brief Statically initializes a semaphore.
+* @brief Statically initializes a semaphore.
  *
- * @param p Initial number of available permits.
+ * Initializes a semaphore with the specified number of permits.
+ *
+ * The internal spinlock is allocated automatically on first use.
+ *
+ * Example:
+ *
+ * @code
+ * semaphore_t resource_semaphore = SEMAPHORE_INITIALIZER(3);
+ * @endcode
  */
 #define SEMAPHORE_INITIALIZER(p) \
   ((semaphore_t){                \
+    .spinlock = NULL,            \
     .permits = (p),              \
     .waiters = LIST_INITIALIZER  \
   })
@@ -101,7 +113,7 @@ void semaphore_release(semaphore_t* semaphore);
  *
  * @param semaphore Semaphore instance.
  *
- * @return Current number of available permits.
+ * @return Snapshot of the current permit count.
  */
 uint32_t semaphore_count(semaphore_t const* semaphore);
 
@@ -109,14 +121,14 @@ uint32_t semaphore_count(semaphore_t const* semaphore);
  * @cond INTERNAL
  */
 
-static inline void semaphore_auto_unlock(semaphore_t** semaphore)
+static inline void semaphore_auto_release(semaphore_t** semaphore)
 {
   semaphore_release(*semaphore);
 }
 
 #define _WITH_SEMAPHORE_BLOCK_WITH_ID(semaphore, ID)                             \
 for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)   \
-  for (semaphore_t* __attribute__((cleanup(semaphore_auto_unlock)))              \
+  for (semaphore_t* __attribute__((cleanup(semaphore_auto_release)))             \
       _CAT(_semaphore_guard_, ID) = (semaphore_acquire(semaphore), semaphore);   \
       _CAT(_once_, ID);                                                          \
       _CAT(_once_, ID) = false                                                   \

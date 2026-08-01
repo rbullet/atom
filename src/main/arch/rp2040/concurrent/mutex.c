@@ -1,24 +1,27 @@
 #include <stdlib.h>
 
 #include <atom.h>
-#include "rp2040/concurrent/spinlock.h"
 #include "rp2040/concurrent/scheduler.h"
 
-#define MUTEX_SPINLOCK spinlock27
+void mutex_ensure_initialized(mutex_t* mutex)
+{
+  spinlock_pool_ensure_initialized(&mutex->spinlock, SPINLOCK_POOLED);
+}
 
 void mutex_lock(mutex_t* mutex)
 {
+  mutex_ensure_initialized(mutex);
   thread_t* const thread = thread_current();
   WITH_INTERRUPTS_DISABLED
   {
     for (;;)
     {
-      spinlock_lock(MUTEX_SPINLOCK);
+      spinlock_lock(mutex->spinlock);
 
       if (mutex->owner == thread)
       {
         mutex->count++;
-        spinlock_unlock(MUTEX_SPINLOCK);
+        spinlock_unlock(mutex->spinlock);
         return;
       }
 
@@ -26,21 +29,22 @@ void mutex_lock(mutex_t* mutex)
       {
         mutex->owner = thread;
         mutex->count = 1;
-        spinlock_unlock(MUTEX_SPINLOCK);
+        spinlock_unlock(mutex->spinlock);
         return;
       }
-      scheduler_thread_block_current_on(&mutex->waiters, MUTEX_SPINLOCK);
+      scheduler_thread_block_current_on(&mutex->waiters, mutex->spinlock);
     }
   }
 }
 
 bool mutex_try_lock(mutex_t* mutex)
 {
+  mutex_ensure_initialized(mutex);
   thread_t* const thread = thread_current();
 
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(MUTEX_SPINLOCK)
+    WITH_SPINLOCK(mutex->spinlock)
     {
       if (mutex->owner == thread)
       {
@@ -60,10 +64,11 @@ bool mutex_try_lock(mutex_t* mutex)
 
 void mutex_unlock(mutex_t* mutex)
 {
+  mutex_ensure_initialized(mutex);
   thread_t* const thread = thread_current();
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(MUTEX_SPINLOCK)
+    WITH_SPINLOCK(mutex->spinlock)
     {
       if (mutex->owner != thread)
       {
@@ -82,5 +87,3 @@ void mutex_unlock(mutex_t* mutex)
     }
   }
 }
-
-#undef MUTEX_SPINLOCK

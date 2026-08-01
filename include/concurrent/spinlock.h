@@ -2,6 +2,7 @@
 
 #ifdef __cplusplus
 extern "C" {
+
 #endif
 
 #include <stdint.h>
@@ -36,68 +37,91 @@ extern "C" {
 /**
  * @brief Hardware spinlock type.
  *
- * A spinlock is represented by a volatile 32-bit hardware register.
+ * A spinlock represents an architecture-provided atomic locking primitive.
  *
- * Semantics are architecture-defined, but conventionally:
- * - Reading a spinlock register attempts to acquire the lock.
- * - A non-zero value indicates successful acquisition.
- * - Zero indicates that another core currently owns the lock.
- *
- * The lock ownership is tracked by the hardware and is associated with
- * the executing core.
+ * The exact acquisition and release semantics are defined by the target
+ * architecture implementation.
  */
 typedef volatile uint32_t spinlock_t;
 
-/** @name Application-owned hardware spinlocks
- *
- * Each supported architecture reserves a set of hardware spinlocks for
- * internal use by the ATOM kernel and its own port (scheduler, mutex,
- * semaphore, condition variable, deferred tasks, allocator, etc.).
- *
- * The 11 spinlocks below (`spinlock0` through `spinlock10`) are
- * guaranteed by every architecture port to be reserved exclusively for
- * application use and are never touched by the kernel. Application code
- * may freely use any of these constants with spinlock_lock(),
- * spinlock_unlock(), spinlock_try_lock(), or the WITH_SPINLOCK() scoped
- * guard, regardless of which target the code is built for.
- *
- * @{
+/**
+ * @brief Spinlock reservation policy.
  */
+typedef enum
+{
+  /**
+   * @brief Reserves a spinlock exclusively for the caller.
+   *
+   * The returned spinlock is guaranteed not to be shared with any other
+   * reservation until it is returned to the pool.
+   *
+   * If no exclusive spinlock is available, the reservation fails and an
+   * assertion is raised.
+   */
+  SPINLOCK_EXCLUSIVE,
 
-/** @brief Application-owned hardware spinlock 0. */
-extern spinlock_t* const spinlock0;
+  /**
+   * @brief Reserves a spinlock from the shared pool.
+   *
+   * Pooled spinlocks are intended for lightweight synchronization objects
+   * where occasional contention between unrelated resources is acceptable.
+   *
+   * Multiple logical synchronization objects may share the same hardware
+   * spinlock. The allocator balances usage between available pooled locks.
+   */
+  SPINLOCK_POOLED
 
-/** @brief Application-owned hardware spinlock 1. */
-extern spinlock_t* const spinlock1;
+} spinlock_reservation_t;
 
-/** @brief Application-owned hardware spinlock 2. */
-extern spinlock_t* const spinlock2;
+/**
+ * @brief Lazily initializes a spinlock resource.
+ *
+ * Allocates a spinlock from the requested reservation class if the pointer
+ * is currently NULL.
+ *
+ * This helper is intended for synchronization objects supporting static
+ * initialization. The first use transparently acquires the required
+ * hardware resource.
+ *
+ * @param lock Address of the spinlock pointer to initialize.
+ * @param type Reservation policy.
+ *
+ * @pre lock must not be NULL.
+ */
+void spinlock_pool_ensure_initialized(spinlock_t** lock, spinlock_reservation_t type);
 
-/** @brief Application-owned hardware spinlock 3. */
-extern spinlock_t* const spinlock3;
+/**
+ * @brief Reserves a spinlock from the pool.
+ *
+ * @param type Reservation policy.
+ *
+ * @return Reserved spinlock.
+ *
+ * @note Exclusive reservations are unique until returned to the pool.
+ *
+ * @note Pooled reservations may reuse spinlocks that are already assigned
+ * to other pooled resources in order to minimize contention while avoiding
+ * allocation failures.
+ */
+spinlock_t* spinlock_pool_reserve(spinlock_reservation_t type);
 
-/** @brief Application-owned hardware spinlock 4. */
-extern spinlock_t* const spinlock4;
 
-/** @brief Application-owned hardware spinlock 5. */
-extern spinlock_t* const spinlock5;
+/**
+ * @brief Returns a spinlock to the pool.
+ *
+ * Releases a reservation previously obtained from
+ * spinlock_pool_reserve().
+ *
+ * For exclusive reservations, the hardware spinlock becomes available for
+ * another exclusive allocation.
+ *
+ * For pooled reservations, the usage count is decremented so the allocator
+ * can rebalance future pooled allocations.
+ *
+ * @param lock Spinlock to return.
+ */
+void spinlock_pool_return(spinlock_t const* lock);
 
-/** @brief Application-owned hardware spinlock 6. */
-extern spinlock_t* const spinlock6;
-
-/** @brief Application-owned hardware spinlock 7. */
-extern spinlock_t* const spinlock7;
-
-/** @brief Application-owned hardware spinlock 8. */
-extern spinlock_t* const spinlock8;
-
-/** @brief Application-owned hardware spinlock 9. */
-extern spinlock_t* const spinlock9;
-
-/** @brief Application-owned hardware spinlock 10. */
-extern spinlock_t* const spinlock10;
-
-/** @} */
 
 /**
  * @brief Acquire a spinlock.

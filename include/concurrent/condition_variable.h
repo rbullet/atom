@@ -39,11 +39,16 @@ extern "C" {
  */
 typedef struct condition_variable_t
 {
-  list_t waiters;
+  spinlock_t* spinlock; ///< Lazily allocated spinlock used for protecting the condition variable state.
+  list_t waiters;       ///< Threads waiting on the condition variable.
 } condition_variable_t;
 
 /**
- * @brief Static condition variable initializer.
+* @brief Static condition variable initializer.
+ *
+ * Initializes a condition variable in the unlocked state.
+ *
+ * The internal spinlock is allocated automatically on first use.
  *
  * Example:
  *
@@ -51,7 +56,7 @@ typedef struct condition_variable_t
  * condition_variable_t data_available = CONDITION_VARIABLE_INITIALIZER;
  * @endcode
  */
-#define CONDITION_VARIABLE_INITIALIZER ((condition_variable_t){ .waiters = LIST_INITIALIZER })
+#define CONDITION_VARIABLE_INITIALIZER ((condition_variable_t){ .spinlock = NULL, .waiters = LIST_INITIALIZER })
 
 /**
  * @brief Wait for a condition.
@@ -70,14 +75,14 @@ typedef struct condition_variable_t
  * {
  *     while (!data_ready)
  *     {
- *         condition_wait(&condition, &lock);
+ *         condition_variable_wait(&condition, &lock);
  *     }
  *
  *     consume_data();
  * }
  * @endcode
  *
- * @param condition Condition variable to wait on.
+ * @param condition_variable Condition variable to wait on.
  * @param mutex Mutex protecting the shared state.
  *
  * @pre condition must be initialized.
@@ -91,7 +96,7 @@ typedef struct condition_variable_t
  * @warning Must only be called from thread context.
  * @warning The condition must always be checked in a loop after waking.
  */
-void condition_variable_wait(condition_variable_t* condition, mutex_t* mutex);
+void condition_variable_wait(condition_variable_t* condition_variable, mutex_t* mutex);
 
 /**
  * @brief Wake one waiting thread.
@@ -122,7 +127,7 @@ void condition_variable_signal(condition_variable_t* condition);
  * If no thread is waiting, the notification is lost.
  *
  * All awakened threads will compete to reacquire their associated mutex
- * before returning from condition_wait().
+ * before returning from condition_variable_wait().
  *
  * @param condition_variable Condition variable to broadcast.
  *

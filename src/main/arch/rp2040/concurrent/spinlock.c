@@ -1,5 +1,7 @@
 #include <stdbool.h>
+#include <stddef.h>
 
+#include <atom.h>
 #include "rp2040/concurrent/spinlock.h"
 
 // --- SIO peripheral registers (from RP2040 SVD) ---
@@ -69,6 +71,157 @@ spinlock_t* const spinlock28 = ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK28_OFFSET))
 spinlock_t* const spinlock29 = ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK29_OFFSET));
 spinlock_t* const spinlock30 = ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK30_OFFSET));
 spinlock_t* const spinlock31 = ((spinlock_t*)(SIO_BASE + SIO_SPINLOCK31_OFFSET));
+
+typedef struct spinlock_node_t
+{
+  spinlock_t* const spinlock;
+  uint32_t count;
+} spinlock_node_t;
+
+#define SPINLOCK_POOL_LOCK spinlock31
+
+spinlock_node_t spinlock_pool[RP2040_SPINLOCK_COUNT] =
+{
+  /* EXCLUSIVE spinlocks */
+  {.spinlock = spinlock0, .count = 0},
+  {.spinlock = spinlock1, .count = 0},
+  {.spinlock = spinlock2, .count = 0},
+  {.spinlock = spinlock3, .count = 0},
+  {.spinlock = spinlock4, .count = 0},
+  {.spinlock = spinlock5, .count = 0},
+  {.spinlock = spinlock6, .count = 0},
+  {.spinlock = spinlock7, .count = 0},
+  {.spinlock = spinlock8, .count = 0},
+  {.spinlock = spinlock9, .count = 0},
+  {.spinlock = spinlock10, .count = 0},
+  {.spinlock = spinlock11, .count = 0},
+  {.spinlock = spinlock12, .count = 0},
+  {.spinlock = spinlock13, .count = 0},
+  {.spinlock = spinlock14, .count = 0},
+  {.spinlock = spinlock15, .count = 0},
+  {.spinlock = spinlock16, .count = 0},
+  {.spinlock = spinlock17, .count = 0},
+  /* POOLED spinlocks */
+  {.spinlock = spinlock18, .count = 0},
+  {.spinlock = spinlock19, .count = 0},
+  {.spinlock = spinlock20, .count = 0},
+  {.spinlock = spinlock21, .count = 0},
+  {.spinlock = spinlock22, .count = 0},
+  {.spinlock = spinlock23, .count = 0},
+  {.spinlock = spinlock24, .count = 0},
+  {.spinlock = spinlock25, .count = 0},
+  {.spinlock = spinlock26, .count = 0},
+  {.spinlock = spinlock27, .count = 0},
+  {.spinlock = spinlock28, .count = 0},
+  {.spinlock = spinlock29, .count = 0},
+  {.spinlock = spinlock30, .count = 0},
+  {.spinlock = spinlock31, .count = 0},
+};
+
+void spinlock_hardware_unlock_all(void)
+{
+  for (size_t i = 0; i < RP2040_SPINLOCK_COUNT; i++)
+  {
+    // Clear RP2040 hardware spinlock state.
+    spinlock0[i] = 1;
+  }
+}
+
+static inline spinlock_node_t* spinlock_pool_node_at(uint32_t const index)
+{
+  ATOM_ASSERT(index < RP2040_SPINLOCK_COUNT, "Invalid spinlock index");
+  return &spinlock_pool[index];
+}
+
+static spinlock_t* reserve_exclusive(void)
+{
+  for (uint32_t i = RP2040_SPINLOCK_EXCLUSIVE_START; i < RP2040_SPINLOCK_POOLED_START; i++)
+  {
+    spinlock_node_t* const node = spinlock_pool_node_at(i);
+
+    if (node->count == 0)
+    {
+      node->count = 1;
+      return node->spinlock;
+    }
+  }
+  ATOM_ASSERT(false, "No exclusive spinlock available. The current max is set to RP2040_SPINLOCK_EXCLUSIVE_COUNT=%d", RP2040_SPINLOCK_EXCLUSIVE_COUNT);
+  return NULL;
+}
+
+static spinlock_t* reserve_pooled(void)
+{
+  uint32_t selected = RP2040_SPINLOCK_POOLED_START;
+  uint32_t lowest_count = UINT32_MAX;
+  for (uint32_t i = RP2040_SPINLOCK_POOLED_START; i < RP2040_SPINLOCK_POOL_END; i++)
+  {
+    spinlock_node_t* const node = spinlock_pool_node_at(i);
+
+    if (node->count < lowest_count)
+    {
+      lowest_count = node->count;
+      selected = i;
+    }
+  }
+  spinlock_pool[selected].count++;
+  return spinlock_pool[selected].spinlock;
+}
+
+static spinlock_t* spinlock_pool_reserve_internal(spinlock_reservation_t type)
+{
+  switch (type)
+  {
+  case SPINLOCK_EXCLUSIVE:
+    return reserve_exclusive();
+
+  case SPINLOCK_POOLED:
+    return reserve_pooled();
+
+  default:
+    ATOM_ASSERT(false, "Invalid spinlock pool type");
+    return NULL;
+  }
+}
+
+spinlock_t* spinlock_pool_reserve(spinlock_reservation_t type)
+{
+  spinlock_t* result = NULL;
+  WITH_SPINLOCK(SPINLOCK_POOL_LOCK)
+  {
+    result = spinlock_pool_reserve_internal(type);
+  }
+  return result;
+}
+
+void spinlock_pool_ensure_initialized(spinlock_t** lock, spinlock_reservation_t const type)
+{
+  ATOM_ASSERT(lock != NULL, "Invalid spinlock pointer");
+
+  if (*lock != NULL)
+  {
+    return;
+  }
+
+  WITH_SPINLOCK(SPINLOCK_POOL_LOCK)
+  {
+    if (*lock == NULL)
+    {
+      *lock = spinlock_pool_reserve_internal(type);
+    }
+  }
+}
+
+void spinlock_pool_return(spinlock_t const* const lock)
+{
+  uint32_t const index = (uint32_t)(lock - spinlock0);
+  ATOM_ASSERT(index < RP2040_SPINLOCK_COUNT, "Invalid spinlock returned");
+  WITH_SPINLOCK(SPINLOCK_POOL_LOCK)
+  {
+    spinlock_node_t* const node = spinlock_pool_node_at(index);
+    ATOM_ASSERT(node->count > 0, "Spinlock returned while unused");
+    node->count--;
+  }
+}
 
 bool spinlock_try_lock(spinlock_t* const spinlock)
 {

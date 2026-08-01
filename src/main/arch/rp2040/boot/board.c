@@ -51,10 +51,7 @@ static void board_reset_clocks(void)
 // --- Initialize all spinlocks to unlocked state ---
 static void board_init_spinlocks(void)
 {
-  for (size_t i = 0; i < 32; i++)
-  {
-    spinlock0[i] = 1;
-  }
+  spinlock_hardware_unlock_all();
 }
 
 // --- Initialize external crystal oscillator (XOSC) ---

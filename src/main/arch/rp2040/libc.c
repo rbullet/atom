@@ -7,7 +7,7 @@
 #include "rp2040/system/cpu.h"
 #include "rp2040/concurrent/spinlock.h"
 
-#define MALLOC_SPINLOCK  spinlock31
+spinlock_t* malloc_spinlock = NULL;
 
 __attribute__((used, weak)) ssize_t atom_console_read(void *buf, size_t size);
 __attribute__((used, weak)) ssize_t atom_console_write(const void *buf, size_t size);
@@ -24,12 +24,13 @@ static uint32_t interrupt_state[CPU_COUNT];
 __attribute__((used)) void __malloc_lock(__attribute__((unused)) struct _reent* r)
 {
   interrupt_state[CPUID] = interrupts_disable();
-  spinlock_lock(MALLOC_SPINLOCK);
+  spinlock_pool_ensure_initialized(&malloc_spinlock, SPINLOCK_EXCLUSIVE);
+  spinlock_lock(malloc_spinlock);
 }
 
 __attribute__((used)) void __malloc_unlock(__attribute__((unused)) struct _reent* r)
 {
-  spinlock_unlock(MALLOC_SPINLOCK);
+  spinlock_unlock(malloc_spinlock);
   interrupts_restore(interrupt_state[CPUID]);
 }
 

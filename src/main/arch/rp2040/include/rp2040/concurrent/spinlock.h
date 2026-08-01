@@ -2,16 +2,14 @@
 
 /**
  * @file spinlock.h
- * @brief RP2040 hardware spinlock definitions.
+ * @brief RP2040 spinlock allocator definitions.
  *
- * This private header exposes the RP2040 hardware spinlock registers used by
- * the ATOM RP2040 port. These symbols are intended exclusively for internal
- * use by the RP2040 architecture implementation and are not part of the
- * public ATOM API.
+ * This private header exposes the RP2040 spinlock allocation policy used by
+ * the ATOM port. It is intended exclusively for internal architecture use.
  *
- * Hardware spinlocks may be reserved by ATOM subsystems to provide efficient
- * mutual exclusion between CPU cores. Reserved spinlocks must not be reused
- * outside of their designated subsystem.
+ * Hardware spinlocks must be accessed through the spinlock pool allocator.
+ * Direct use of hardware spinlock registers is not permitted outside of the
+ * spinlock implementation.
  */
 
 #ifdef __cplusplus
@@ -20,113 +18,49 @@ extern "C" {
 
 #include "concurrent/spinlock.h"
 
-/** @name RP2040 hardware spinlocks
+/**
+ * @name RP2040 spinlock allocation layout
  *
- * Hardware spinlock registers provided by the RP2040 SIO peripheral.
+ * The RP2040 provides 32 hardware spinlocks. ATOM manages these resources
+ * through a central allocator.
  *
- * Spinlocks 0-24 are currently available for general internal use by the
- * RP2040 port. Spinlocks 25-31 are reserved by ATOM subsystems.
+ * The allocation regions are:
+ *
+ * - Exclusive resources:
+ *   Locks with stable ownership reserved for components requiring a dedicated
+ *   spinlock. This includes ATOM internal users and user requested exclusive
+ *   allocations.
+ *
+ * - Pooled resources:
+ *   Locks allocated dynamically for synchronization objects created at runtime.
+ *
+ * One lock is reserved internally by the allocator to protect the spinlock
+ * pool itself and is never returned by the allocator.
  *
  * @{
  */
 
-/** @brief Hardware spinlock 0. */
-extern spinlock_t* const spinlock0;
+#define RP2040_SPINLOCK_COUNT                  32
 
-/** @brief Hardware spinlock 1. */
-extern spinlock_t* const spinlock1;
+#define RP2040_SPINLOCK_POOL_LOCK_COUNT         1
 
-/** @brief Hardware spinlock 2. */
-extern spinlock_t* const spinlock2;
+#define RP2040_SPINLOCK_EXCLUSIVE_SYSTEM_COUNT  8
 
-/** @brief Hardware spinlock 3. */
-extern spinlock_t* const spinlock3;
+#define RP2040_SPINLOCK_EXCLUSIVE_USER_COUNT   10
 
-/** @brief Hardware spinlock 4. */
-extern spinlock_t* const spinlock4;
+#define RP2040_SPINLOCK_EXCLUSIVE_COUNT (RP2040_SPINLOCK_EXCLUSIVE_SYSTEM_COUNT + RP2040_SPINLOCK_EXCLUSIVE_USER_COUNT)
 
-/** @brief Hardware spinlock 5. */
-extern spinlock_t* const spinlock5;
+#define RP2040_SPINLOCK_POOLED_COUNT (RP2040_SPINLOCK_COUNT - RP2040_SPINLOCK_POOL_LOCK_COUNT - RP2040_SPINLOCK_EXCLUSIVE_COUNT)
 
-/** @brief Hardware spinlock 6. */
-extern spinlock_t* const spinlock6;
+#define RP2040_SPINLOCK_EXCLUSIVE_START 0
 
-/** @brief Hardware spinlock 7. */
-extern spinlock_t* const spinlock7;
+#define RP2040_SPINLOCK_POOLED_START (RP2040_SPINLOCK_EXCLUSIVE_START + RP2040_SPINLOCK_EXCLUSIVE_COUNT)
 
-/** @brief Hardware spinlock 8. */
-extern spinlock_t* const spinlock8;
-
-/** @brief Hardware spinlock 9. */
-extern spinlock_t* const spinlock9;
-
-/** @brief Hardware spinlock 10. */
-extern spinlock_t* const spinlock10;
-
-/** @brief Hardware spinlock 11. */
-extern spinlock_t* const spinlock11;
-
-/** @brief Hardware spinlock 12. */
-extern spinlock_t* const spinlock12;
-
-/** @brief Hardware spinlock 13. */
-extern spinlock_t* const spinlock13;
-
-/** @brief Hardware spinlock 14. */
-extern spinlock_t* const spinlock14;
-
-/** @brief Hardware spinlock 15. */
-extern spinlock_t* const spinlock15;
-
-/** @brief Hardware spinlock 16. */
-extern spinlock_t* const spinlock16;
-
-/** @brief Hardware spinlock 17. */
-extern spinlock_t* const spinlock17;
-
-/** @brief Hardware spinlock 18. */
-extern spinlock_t* const spinlock18;
-
-/** @brief Hardware spinlock 19. */
-extern spinlock_t* const spinlock19;
-
-/** @brief Hardware spinlock 20. */
-extern spinlock_t* const spinlock20;
-
-/** @brief Hardware spinlock 21. */
-extern spinlock_t* const spinlock21;
-
-/** @brief Hardware spinlock 22. */
-extern spinlock_t* const spinlock22;
-
-/** @brief Hardware spinlock 23. */
-extern spinlock_t* const spinlock23;
-
-/** @brief Hardware spinlock 24. */
-extern spinlock_t* const spinlock24;
-
-/** @brief Reserved for the condition variable subsystem. */
-extern spinlock_t* const spinlock25;
-
-/** @brief Reserved for the semaphore subsystem. */
-extern spinlock_t* const spinlock26;
-
-/** @brief Reserved for the mutex subsystem. */
-extern spinlock_t* const spinlock27;
-
-/** @brief Reserved for the deferred task subsystem. */
-extern spinlock_t* const spinlock28;
-
-/** @brief Reserved for the thread subsystem. */
-extern spinlock_t* const spinlock29;
-
-/** @brief Reserved for the scheduler subsystem. */
-extern spinlock_t* const spinlock30;
-
-/** @brief Reserved for the memory allocator. */
-extern spinlock_t* const spinlock31;
+#define RP2040_SPINLOCK_POOL_END (RP2040_SPINLOCK_POOLED_START + RP2040_SPINLOCK_POOLED_COUNT)
 
 /** @} */
+
+void spinlock_hardware_unlock_all(void);
 
 #ifdef __cplusplus
 }
