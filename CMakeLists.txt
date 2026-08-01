@@ -12,6 +12,7 @@ add_subdirectory(src/main)
 # ------------------------------------------------------------------------------
 add_subdirectory(examples/stdin_stdout)
 add_subdirectory(examples/thread)
+add_subdirectory(examples/spinlock)
 
 # ------------------------------------------------------------------------------
 # Doxygen documentation
