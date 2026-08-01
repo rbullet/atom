@@ -14,6 +14,7 @@ add_subdirectory(examples/00_developer_playground)
 add_subdirectory(examples/01_hello_world)
 add_subdirectory(examples/02_blink)
 add_subdirectory(examples/03_stdin_stdout)
+add_subdirectory(examples/04_timer)
 
 # ------------------------------------------------------------------------------
 # Doxygen documentation
