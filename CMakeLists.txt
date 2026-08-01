@@ -15,6 +15,7 @@ add_subdirectory(examples/01_hello_world)
 add_subdirectory(examples/02_blink)
 add_subdirectory(examples/03_stdin_stdout)
 add_subdirectory(examples/04_timer)
+add_subdirectory(examples/05_threads)
 
 # ------------------------------------------------------------------------------
 # Doxygen documentation

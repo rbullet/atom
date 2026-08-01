@@ -5,20 +5,19 @@
 
 int main(void)
 {
-    char buffer[BUFFER_SIZE];
+  char buffer[BUFFER_SIZE];
 
-    printf("Console echo ready.\r\n");
+  printf("Console echo ready.\r\n");
 
-    while (1)
+  while (1)
+  {
+    printf("> ");
+
+    if (fgets(buffer, sizeof(buffer), stdin) != NULL)
     {
-        printf("> ");
-
-        if (fgets(buffer, sizeof(buffer), stdin) != NULL)
-        {
-            printf("echo: %s", buffer);
-        }
-
+      printf("echo: %s", buffer);
     }
+  }
 
-    return 0;
+  return 0;
 }
