@@ -117,3 +117,6 @@ venv/
 
 # Linker scripts generated from the architecture template.
 examples/*/linker.ld
+
+# Remove 00_developer_playground from git tracking
+/examples/00_developer_playground/*
