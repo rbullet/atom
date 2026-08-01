@@ -15,7 +15,9 @@ The project focuses on:
 - Small and readable implementation
 - True dual-core scheduling
 - Explicit resource ownership
-- No kernel dynamic allocation
+- No kernel heap allocation
+- Application-owned resources and thread stacks
+- Lazy allocation of internal synchronization resources
 
 ---
 
@@ -68,7 +70,7 @@ synchronization, and multicore execution on microcontrollers.
 - Thread migration
 - PendSV context switching
 - 1 ms scheduling tick
-- Cooperative yielding
+- Explicit cooperative yielding (`thread_yield()`)
 - Blocking synchronization primitives
 
 ## Concurrency
@@ -168,8 +170,14 @@ int main(void)
 > `thread_start()` are scheduled automatically alongside the main thread.
 
 This example lives under `examples/thread`. The `examples/` directory contains
-other self-contained sample applications, such as `examples/stdin_stdout`,
-demonstrating the C runtime / `printf`-`fgets` console integration.
+other self-contained sample applications:
+
+- `examples/stdin_stdout` — demonstrates the C runtime / `printf`-`fgets`
+  console integration.
+- `examples/spinlock` — demonstrates the hardware spinlock pool allocator.
+- `examples/context_switch` — stress-tests preemptive context switching by
+  verifying callee-saved registers survive a `thread_yield()` across many
+  concurrently scheduled threads.
 
 ---
 
@@ -202,21 +210,23 @@ release a lock.
 `WITH_SPINLOCK(lock)` follows the same pattern:
 
 ```c
-WITH_SPINLOCK(spinlock0)
+spinlock_t* lock = spinlock_pool_reserve(SPINLOCK_POOLED);
+
+WITH_SPINLOCK(lock)
 {
-  update_shared_hardware_state();
+    update_shared_hardware_state();
 }
 ```
 
-The RP2040 SIO peripheral provides 32 independent hardware spinlocks, but
-the public API only exposes 11 of them (`spinlock0` through `spinlock10`)
-as portable constants. This is a deliberate architectural choice: every
-supported architecture port guarantees at least these 11 slots for
-application use, regardless of how many hardware spinlocks the underlying
-chip actually provides or how many the kernel reserves internally
-(scheduler, mutex, semaphore, condition variable, deferred task, and
-allocator subsystems). Application code written against this API remains
-portable across architecture ports.
+The public spinlock API does not expose hardware spinlock registers directly.
+Hardware spinlocks are managed through the ATOM spinlock pool allocator.
+
+Applications can request:
+- exclusive spinlocks for dedicated ownership,
+- pooled spinlocks for dynamically created synchronization objects.
+
+This keeps hardware resource ownership centralized and prevents conflicts between
+application code and ATOM internals.
 
 ---
 
@@ -227,6 +237,9 @@ C runtime environment on bare metal.
 
 Applications can use standard C APIs such as `printf()`, `puts()`, `getchar()`,
 `fgets()`, `malloc()`, and `free()` without including ATOM-specific headers.
+
+Heap usage is optional and belongs entirely to the application.
+ATOM synchronization and scheduler internals do not depend on heap allocation.
 
 For example, this standard C program can run unchanged on both a desktop operating
 system and ATOM:
@@ -261,23 +274,24 @@ On ATOM, the board initialization configures UART0 as the default console and
 connects it to the C standard streams. Therefore, stdin, stdout, printf(),
 getchar(), puts(), and fgets() are available immediately after startup.
 
-The runtime integration provides the low-level bindings required by newlib, including:
+The runtime integration provides the low-level OS glue (syscall stubs) required
+by newlib to run on bare metal, including:
 
-- Memory operations:
-  - `memcpy`
-  - `memset`
-  - `memmove`
-  - `memcmp`
+- Heap management:
+  - `_sbrk` (backs `malloc`, `calloc`, `realloc`, `free`)
+  - `__malloc_lock` / `__malloc_unlock` (thread/cross-core safe heap locking)
 
-- Formatted output:
-  - `printf`
-  - `snprintf`
+- Console I/O:
+  - `_read` / `_write` (backs `printf`, `scanf`, `fgets`, `getchar`, etc., routed
+    through UART0 by default)
 
-- Dynamic memory management:
-  - `malloc`
-  - `calloc`
-  - `realloc`
-  - `free`
+- Misc. process stubs required to satisfy the newlib/libgcc link:
+  - `_close`, `_fstat`, `_isatty`, `_lseek`, `_exit`, `_kill`, `_getpid`,
+    `_gettimeofday`
+
+Standard functions such as `memcpy`, `memset`, `memmove`, `memcmp`, `printf`,
+and `snprintf` themselves are provided by newlib/libgcc (via `--specs=nano.specs`),
+not reimplemented by ATOM.
 
 These facilities are provided without requiring an underlying operating system.
 
@@ -372,8 +386,8 @@ Both Cortex-M0+ cores execute application threads concurrently.
 
 Features:
 
-- Shared thread pool
-- Thread migration
+- Shared ready queue
+- Thread migration between cores
 - Independent context switching
 - Hardware spinlock protection
 - Core 0 maintains global system time
@@ -395,6 +409,8 @@ atom/
 │       └── arch/rp2040/
 │
 ├── examples/
+│   ├── context_switch/
+│   ├── spinlock/
 │   ├── stdin_stdout/
 │   └── thread/
 │
@@ -421,7 +437,7 @@ project.
 | Mutex | Recursive mutual exclusion |
 | Semaphore | Counting synchronization |
 | Condition Variable | Wait/signal synchronization |
-| Spinlock | Hardware-backed cross-core locking (`spinlock0`-`spinlock10` are reserved for application use; remaining slots are used internally by the kernel) |
+| Spinlock | Hardware-backed cross-core locking. Hardware resources are managed through the spinlock pool allocator. |
 | Deferred Task | Delayed or periodic callbacks |
 | Interrupt Control | Scoped interrupt masking |
 | Scoped Guards | `WITH_MUTEX` / `WITH_SEMAPHORE` / `WITH_INTERRUPTS_DISABLED` blocks |
@@ -558,9 +574,9 @@ Current limitations include:
 - Blocking-only UART driver (no interrupt-driven/async I/O)
 - `duration_t` uses `float`; the Cortex-M0+ has no hardware FPU, so duration
   arithmetic is done in software
-- Only 11 portable hardware spinlock slots (`spinlock0`-`spinlock10`) are
-  exposed for application use; additional slots may exist depending on the
-  architecture port but are reserved internally by the kernel
+- Hardware spinlocks are managed internally by the ATOM spinlock subsystem.
+  Applications must acquire spinlocks through the allocator API rather than
+  accessing hardware registers directly.
 
 ---
 
