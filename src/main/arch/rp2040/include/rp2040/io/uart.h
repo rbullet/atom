@@ -75,31 +75,31 @@ typedef struct
 // --- Check if a UART mode is enabled ---
 static inline bool uart_has_mode(uart_t const* uart, uint32_t const uart_mode)
 {
-  return (((*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTCR_OFFSET))) & (uart_mode & UART_CR_MASK)) != 0;
+  return (REG(uart, UART0_UARTCR_OFFSET) & (uart_mode & UART_CR_MASK)) != 0;
 }
 
 // --- Disable a UART mode ---
 static inline void uart_disable_mode(uart_t* uart, uint32_t const uart_mode)
 {
-  (*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTCR_OFFSET)) &= ~(uart_mode & UART_CR_MASK);
+  REG(uart, UART0_UARTCR_OFFSET) &= ~(uart_mode & UART_CR_MASK);
 }
 
 // --- Enable a UART mode ---
 static inline void uart_enable_mode(uart_t* uart, uint32_t const uart_mode)
 {
-  (*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTCR_OFFSET)) |= (uart_mode & UART_CR_MASK);
+  REG(uart, UART0_UARTCR_OFFSET) |= (uart_mode & UART_CR_MASK);
 }
 
 // --- Check if RX FIFO is empty ---
 static inline bool uart_rx_fifo_is_empty(uart_t const* uart)
 {
-  return REG_GET_FIELD((*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTFR_OFFSET)), UART0_UARTFR_RXFE) == 1U;
+  return REG_GET_FIELD(REG(uart, UART0_UARTFR_OFFSET), UART0_UARTFR_RXFE) == 1U;
 }
 
 // --- Check if TX FIFO is full ---
 static inline bool uart_tx_fifo_is_full(uart_t const* uart)
 {
-  return REG_GET_FIELD((*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTFR_OFFSET)), UART0_UARTFR_TXFF) == 1;
+  return REG_GET_FIELD(REG(uart, UART0_UARTFR_OFFSET), UART0_UARTFR_TXFF) == 1;
 }
 
 // --- Compute baud rate divisors for a given baud rate ---

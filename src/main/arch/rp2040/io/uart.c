@@ -13,10 +13,10 @@ uart_t* const uart1 = (uart_t*)UART1_BASE;
 void uart_init(uart_t* uart, uint32_t const baud_rate)
 {
   baud_rate_params_t const baud_rate_params = uart_get_baud_rate_params(baud_rate);
-  REG_SET_FIELD(((*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTIBRD_OFFSET))), UART0_UARTIBRD_BAUD_DIVINT, baud_rate_params.ibrd);
-  REG_SET_FIELD(((*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTFBRD_OFFSET))), UART0_UARTFBRD_BAUD_DIVFRAC, baud_rate_params.fbrd);
-  REG_SET_FIELD(((*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTLCR_H_OFFSET))), UART0_UARTLCR_H_WLEN, UARTLCR_H_WLEN_8_BITS);
-  REG_SET_FIELD(((*(uint32_t*)PTR_OFFSET(uart, 1, UART0_UARTLCR_H_OFFSET))), UART0_UARTLCR_H_FEN, UARTLCR_H_FEN_FIFO_ENABLED);
+  REG_SET_FIELD(REG(uart, UART0_UARTIBRD_OFFSET), UART0_UARTIBRD_BAUD_DIVINT, baud_rate_params.ibrd);
+  REG_SET_FIELD(REG(uart, UART0_UARTFBRD_OFFSET), UART0_UARTFBRD_BAUD_DIVFRAC, baud_rate_params.fbrd);
+  REG_SET_FIELD(REG(uart, UART0_UARTLCR_H_OFFSET), UART0_UARTLCR_H_WLEN, UARTLCR_H_WLEN_8_BITS);
+  REG_SET_FIELD(REG(uart, UART0_UARTLCR_H_OFFSET), UART0_UARTLCR_H_FEN, UARTLCR_H_FEN_FIFO_ENABLED);
   uart_enable_mode(uart, UART_UARTCR_TXE | UART_UARTCR_RXE | UART_UARTCR_UARTEN);
 }
 
