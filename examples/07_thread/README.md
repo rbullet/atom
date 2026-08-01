@@ -1,4 +1,4 @@
-# Threads Example
+# Thread Example
 
 This example demonstrates how to create and run multiple threads using ATOM.
 
