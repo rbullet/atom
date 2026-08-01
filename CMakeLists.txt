@@ -11,6 +11,7 @@ add_subdirectory(src/main)
 # Examples
 # ------------------------------------------------------------------------------
 add_subdirectory(examples/00_developer_playground)
+add_subdirectory(examples/01_hello_world)
 
 # ------------------------------------------------------------------------------
 # Doxygen documentation
