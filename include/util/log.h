@@ -78,13 +78,7 @@ typedef enum
  * @note Custom printers should be thread-safe and reentrant.
  * @note Printers may be called from any context (thread or ISR).
  */
-typedef void (*log_printer_func_t)(FILE* output,
-                                   log_level_t level,
-                                   char const* file,
-                                   char const* function,
-                                   int line,
-                                   char const* fmt,
-                                   va_list args);
+typedef void (*log_printer_func_t)(FILE* output, log_level_t level, char const* file, int line, char const* fmt, va_list args);
 
 /**
  * @brief Configure the output stream.
@@ -146,7 +140,7 @@ void log_set_printer(log_printer_func_t printer_func);
  *
  * @note Messages below the configured minimum level are ignored.
  */
-void log_print(log_level_t level, char const* file, char const* function, int line, char const* fmt, ...);
+void log_print(log_level_t level, char const* file, int line, char const* fmt, ...);
 
 /**
  * @brief Prints a fatal error message.
@@ -156,7 +150,7 @@ void log_print(log_level_t level, char const* file, char const* function, int li
  * @param fmt Format string.
  * @param ... Format arguments.
  */
-#define log_fatal(fmt, ...) log_print(LOG_LEVEL_FATAL, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_fatal(fmt, ...) log_print(LOG_LEVEL_FATAL, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Prints an error message.
@@ -166,7 +160,7 @@ void log_print(log_level_t level, char const* file, char const* function, int li
  * @param fmt Format string.
  * @param ... Format arguments.
  */
-#define log_error(fmt, ...) log_print(LOG_LEVEL_ERROR, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_error(fmt, ...) log_print(LOG_LEVEL_ERROR, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Prints a warning message.
@@ -176,7 +170,7 @@ void log_print(log_level_t level, char const* file, char const* function, int li
  * @param fmt Format string.
  * @param ... Format arguments.
  */
-#define log_warn(fmt, ...) log_print(LOG_LEVEL_WARN, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_warn(fmt, ...) log_print(LOG_LEVEL_WARN, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Prints an informational message.
@@ -186,7 +180,7 @@ void log_print(log_level_t level, char const* file, char const* function, int li
  * @param fmt Format string.
  * @param ... Format arguments.
  */
-#define log_info(fmt, ...) log_print(LOG_LEVEL_INFO, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_info(fmt, ...) log_print(LOG_LEVEL_INFO, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Prints a debug message.
@@ -198,7 +192,7 @@ void log_print(log_level_t level, char const* file, char const* function, int li
  *
  * @note Debug messages are usually enabled only for debug builds.
  */
-#define log_debug(fmt, ...) log_print(LOG_LEVEL_DEBUG, __FILE__, __func__, __LINE__, fmt, ##__VA_ARGS__)
+#define log_debug(fmt, ...) log_print(LOG_LEVEL_DEBUG, __FILE__, __LINE__, fmt, ##__VA_ARGS__)
 
 /**
  * @brief Default human-readable log printer.
@@ -225,7 +219,7 @@ void log_print(log_level_t level, char const* file, char const* function, int li
  *
  * @note Thread-safe; safe to use as a log printer function.
  */
-void log_default_printer(FILE* output, log_level_t level, char const* file, char const* function, int line, char const* fmt, va_list args);
+void log_default_printer(FILE* output, log_level_t level, char const* file, int line, char const* fmt, va_list args);
 
 /** @} */ /* end of log group */
 
