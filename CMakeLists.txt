@@ -17,6 +17,7 @@ add_subdirectory(examples/03_stdin_stdout)
 add_subdirectory(examples/04_timer)
 add_subdirectory(examples/05_threads)
 add_subdirectory(examples/06_mutex)
+add_subdirectory(examples/07_semaphore)
 
 # ------------------------------------------------------------------------------
 # Doxygen documentation
