@@ -73,6 +73,30 @@ extern "C" {
  */
 #define REG_SET_FIELD(reg, field, value) ((reg) = (((reg) & ~((uint32_t)field##_MASK)) | (((uint32_t)(value) << field##_OFFSET) & (uint32_t)field##_MASK)))
 
+
+/**
+ * @brief Returns the number of elements in a statically allocated array.
+ *
+ * Computes the element count of an array at compile time.
+ *
+ * This macro must only be used with actual arrays. It must not be used with
+ * pointers, as `sizeof(pointer)` returns the pointer size rather than the
+ * size of the referenced object.
+ *
+ * Example:
+ *
+ * @code
+ * uint32_t values[] = {1, 2, 3, 4};
+ *
+ * size_t count = ARRAY_SIZE(values); // 4
+ * @endcode
+ *
+ * @param array Array whose element count is requested.
+ *
+ * @return Number of elements contained in the array.
+ */
+#define ARRAY_SIZE(array) (sizeof(array) / sizeof((array)[0]))
+
 /** @} */ /* end of helpers */
 /** @} */ /* end of util */
 
