@@ -3,7 +3,7 @@
 # ------------------------------------------------------------------------------
 set(CMAKE_C_STANDARD 99)
 
-set(CMAKE_C_FLAGS_DEBUG "-Og -g -DDEBUG")
+set(CMAKE_C_FLAGS_DEBUG "-O2 -g -DDEBUG")
 set(CMAKE_C_FLAGS_RELEASE "-Os -flto")
 
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY
@@ -18,7 +18,6 @@ add_library(atom STATIC)
 
 target_sources(atom PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/util/log.c
-        ${CMAKE_CURRENT_SOURCE_DIR}/util/assert.c
         ${CMAKE_CURRENT_SOURCE_DIR}/util/duration.c
         ${CMAKE_CURRENT_SOURCE_DIR}/util/collection/sorted_list.c
 )
