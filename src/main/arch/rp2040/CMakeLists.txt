@@ -57,6 +57,7 @@ target_sources(atom PRIVATE
 
         system/pll.c
         system/clocks.c
+        system/cpu.c
 )
 
 # ------------------------------------------------------------------------------
