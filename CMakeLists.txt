@@ -10,9 +10,7 @@ add_subdirectory(src/main)
 # ------------------------------------------------------------------------------
 # Examples
 # ------------------------------------------------------------------------------
-add_subdirectory(examples/stdin_stdout)
-add_subdirectory(examples/thread)
-add_subdirectory(examples/spinlock)
+add_subdirectory(examples/00_developer_playground)
 
 # ------------------------------------------------------------------------------
 # Doxygen documentation
