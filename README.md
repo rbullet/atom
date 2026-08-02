@@ -1,5 +1,11 @@
 # ATOM
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Language: C](https://img.shields.io/badge/Language-C-blue.svg)](...)
+[![Platform: RP2040](https://img.shields.io/badge/Platform-RP2040-green.svg)](https://www.raspberrypi.com/products/rp2040/)
+[![Architecture: ARM Cortex--M0+](https://img.shields.io/badge/Architecture-ARM%20Cortex--M0%2B-orange.svg)](https://developer.arm.com/Processors/Cortex-M0-Plus)
+[![Build System: CMake](https://img.shields.io/badge/Build-CMake-red.svg)](...)
+
 **ATOM** is a lightweight educational bare-metal SMP framework for the Raspberry Pi Pico (RP2040).
 
 It provides a small RTOS-like execution environment built from scratch, including
@@ -13,7 +19,7 @@ The project focuses on:
 
 - Simple APIs inspired by higher-level environments
 - Small and readable implementation
-- True dual-core scheduling
+- True dual-core SMP scheduling
 - Explicit resource ownership
 - No kernel heap allocation
 - Application-owned resources and thread stacks
@@ -601,13 +607,15 @@ Current limitations include:
 
 # Contributing
 
-Contributions are welcome.
+Contributions, ideas, and feedback are always welcome.
 
-Please:
+If you've found a bug, have a feature request, or would like to propose an improvement:
 
-1. Fork the repository.
-2. Create a feature branch.
-3. Submit a pull request.
+Open an Issue to report bugs or request new features.
+Start a Discussion to ask questions or share ideas.
+Submit a Pull Request if you'd like to contribute code or documentation.
+
+Whether it's a bug report, a suggestion, a documentation improvement, or a code contribution, every contribution is appreciated.
 
 ---
 
