@@ -1,10 +1,10 @@
 #include "rp2040/io/gpio.h"
 #include "rp2040/system/resets.h"
 
-#define SIO_GPIO_OUT_SET ((volatile uint32_t*)(SIO_BASE + SIO_GPIO_OUT_SET_OFFSET))
-#define SIO_GPIO_OUT_CLR ((volatile uint32_t*)(SIO_BASE + SIO_GPIO_OUT_CLR_OFFSET))
-#define SIO_GPIO_IN      ((volatile uint32_t*)(SIO_BASE + SIO_GPIO_IN_OFFSET))
-#define SIO_GPIO_OUT_XOR ((volatile uint32_t*)(SIO_BASE + SIO_GPIO_OUT_XOR_OFFSET))
+#define SIO_GPIO_OUT_SET REG(SIO_BASE, SIO_GPIO_OUT_SET_OFFSET)
+#define SIO_GPIO_OUT_CLR REG(SIO_BASE, SIO_GPIO_OUT_CLR_OFFSET)
+#define SIO_GPIO_IN      REG(SIO_BASE, SIO_GPIO_IN_OFFSET)
+#define SIO_GPIO_OUT_XOR REG(SIO_BASE, SIO_GPIO_OUT_XOR_OFFSET)
 
 void gpio_init(void)
 {
@@ -22,20 +22,20 @@ void gpio_write(uint32_t const pin, gpio_level_t const level)
 {
   if (level == GPIO_LEVEL_HIGH)
   {
-    *SIO_GPIO_OUT_SET = (1U << pin);
+    SIO_GPIO_OUT_SET = (1U << pin);
   }
   else
   {
-    *SIO_GPIO_OUT_CLR = (1U << pin);
+    SIO_GPIO_OUT_CLR = (1U << pin);
   }
 }
 
 gpio_level_t gpio_read(uint32_t const pin)
 {
-  return (*SIO_GPIO_IN & (1u << pin)) ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW;
+  return (SIO_GPIO_IN & (1u << pin)) ? GPIO_LEVEL_HIGH : GPIO_LEVEL_LOW;
 }
 
 void gpio_toggle(uint32_t const pin)
 {
-  *SIO_GPIO_OUT_XOR = (1U << pin);
+  SIO_GPIO_OUT_XOR = (1U << pin);
 }
