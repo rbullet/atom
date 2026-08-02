@@ -66,8 +66,7 @@ synchronization, and multicore execution on microcontrollers.
 ## Scheduler
 
 - Preemptive SMP scheduling
-- Shared ready queue
-- Thread migration
+- Per-core ready queues with cross-core work stealing
 - PendSV context switching
 - 1 ms scheduling tick
 - Explicit cooperative yielding (`thread_yield()`)
@@ -169,15 +168,24 @@ int main(void)
 > `main()` is entered, so there is no `scheduler_start()` function. Threads created with
 > `thread_start()` are scheduled automatically alongside the main thread.
 
-This example lives under `examples/thread`. The `examples/` directory contains
-other self-contained sample applications:
+This snippet mirrors `examples/07_thread`. The `examples/` directory contains a
+progression of self-contained, standalone sample applications, each
+demonstrating one feature in isolation:
 
-- `examples/stdin_stdout` — demonstrates the C runtime / `printf`-`fgets`
-  console integration.
-- `examples/spinlock` — demonstrates the hardware spinlock pool allocator.
-- `examples/context_switch` — stress-tests preemptive context switching by
-  verifying callee-saved registers survive a `thread_yield()` across many
-  concurrently scheduled threads.
+| Example | Demonstrates |
+|---|---|
+| `00_developer_playground` | Scratch template for experimenting; not built as part of the normal example set semantics, just a starting point to copy |
+| `01_hello_world` | Minimal `printf()` over the C runtime / UART0 console |
+| `02_blink` | GPIO configuration and `thread_sleep()` |
+| `03_stdin_stdout` | `printf()` / `fgets()` console echo loop |
+| `04_assert` | `ATOM_ASSERT()` usage and failure reporting |
+| `05_logging` | The logging framework (`log_info`, `log_warn`, `log_error`, `log_debug`, severity filtering) |
+| `06_timer` | Periodic callbacks via `deferred_task_start_periodic()` |
+| `07_thread` | Multiple concurrent threads (`thread_init` / `thread_start`) |
+| `08_thread_result` | `thread_join()` and retrieving a thread's return value |
+| `09_mutex` | `mutex_t` / `WITH_MUTEX` protecting a counter shared between threads |
+| `10_semaphore` | `semaphore_t` producer/consumer synchronization |
+| `11_condition_variable` | `condition_variable_t` wait/broadcast synchronization |
 
 ---
 
@@ -335,7 +343,7 @@ This produces the static library:
 build/libatom.a
 ```
 
-along with any example executables (e.g. `stdin_stdout`, `thread`), which are
+along with any example executables (e.g. `02_blink`, `09_mutex`), which are
 placed under their respective `examples/<name>/build/` directories.
 
 To build your own application, link against `libatom.a` and add `include/` to
@@ -352,7 +360,7 @@ target_link_libraries(my_app PRIVATE
 Create a UF2 image from an example (or your own executable):
 
 ```bash
-../tools/elf2uf2 examples/stdin_stdout/build/stdin_stdout -o stdin_stdout.uf2
+../tools/elf2uf2 examples/02_blink/build/02_blink -o 02_blink.uf2
 ```
 
 Copy the UF2 onto the Pico while it is in BOOTSEL mode.
@@ -365,32 +373,34 @@ ATOM implements a lightweight symmetric multiprocessing scheduler.
 
 Both Cortex-M0+ cores execute application threads concurrently.
 
-```
-                Shared Scheduler
+Each core owns its own ready queue. When a core's queue runs empty, it steals
+a runnable thread from the other core's queue before falling back to its idle
+thread, which keeps both cores fed without a single shared/contended queue.
 
-                 Ready Queue
-             Running / Ready Threads
-               Synchronization
-                      │
-             scheduler_spinlock
-          ┌───────────┴───────────┐
-          │                       │
-          ▼                       ▼
-      +---------+             +---------+
-      | Core 0  |             | Core 1  |
-      +---------+             +---------+
-      | SysTick |             | SysTick |
-      | PendSV  |             | PendSV  |
-      +---------+             +---------+
+```
+        Core 0                              Core 1
+   ┌───────────────┐                   ┌───────────────┐
+   │  Ready Queue   │◄─── work steal ──►│  Ready Queue   │
+   │ (scheduler_    │                   │ (scheduler_    │
+   │  spinlock[0])  │                   │  spinlock[1])  │
+   └───────┬────────┘                   └───────┬────────┘
+           │                                     │
+           ▼                                     ▼
+      +---------+                           +---------+
+      | Core 0  |                           | Core 1  |
+      +---------+                           +---------+
+      | SysTick |                           | SysTick |
+      | PendSV  |                           | PendSV  |
+      +---------+                           +---------+
 ```
 
 Features:
 
-- Shared ready queue
-- Thread migration between cores
-- Independent context switching
-- Hardware spinlock protection
-- Core 0 maintains global system time
+- Per-core ready queues, protected by per-core hardware spinlocks
+- Cross-core work stealing: an idle core pulls a runnable thread from the
+  other core's queue instead of sitting idle while work is available
+- Independent context switching per core
+- Core 0 maintains the global scheduler tick / time base
 
 ---
 
@@ -409,10 +419,18 @@ atom/
 │       └── arch/rp2040/
 │
 ├── examples/
-│   ├── context_switch/
-│   ├── spinlock/
-│   ├── stdin_stdout/
-│   └── thread/
+│   ├── 00_developer_playground/
+│   ├── 01_hello_world/
+│   ├── 02_blink/
+│   ├── 03_stdin_stdout/
+│   ├── 04_assert/
+│   ├── 05_logging/
+│   ├── 06_timer/
+│   ├── 07_thread/
+│   ├── 08_thread_result/
+│   ├── 09_mutex/
+│   ├── 10_semaphore/
+│   └── 11_condition_variable/
 │
 ├── build/
 │   └── libatom.a
@@ -503,10 +521,11 @@ Start OpenOCD:
 openocd -f openocd_pico.cfg
 ```
 
-Connect using GDB:
+Connect using GDB, targeting one of the built example executables (`atom`
+itself is a static library and cannot be loaded/debugged directly):
 
 ```gdb
-arm-none-eabi-gdb build/atom
+arm-none-eabi-gdb examples/02_blink/build/02_blink
 
 (gdb) target remote :3333
 (gdb) load
