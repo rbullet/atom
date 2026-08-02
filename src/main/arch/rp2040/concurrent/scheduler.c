@@ -84,7 +84,7 @@ static void scheduler_boot_core_1(void);
 static bool scheduler_deferred_task_expiration_comparator(list_node_t const* left, list_node_t const* right);
 static void scheduler_thread_transition_to_running(thread_t* thread);
 static __attribute__((noreturn)) void scheduler_thread_terminate_current(void* retval);
-void scheduler_request_context_switch(void);
+static void scheduler_request_context_switch(void);
 
 // --- Thread Queues ---
 static list_t ready_queue[CPU_COUNT] = {LIST_INITIALIZER, LIST_INITIALIZER};
@@ -122,7 +122,7 @@ void scheduler_sys_tick_handler(void)
   }
 }
 
-__attribute__((used)) static void scheduler_save_current_sp(uint32_t* sp)
+__attribute__((used, unused)) static void scheduler_save_current_sp(uint32_t* sp)
 {
   // current_thread[CPUID] still points to the old thread here
   current_thread[CPUID]->sp = sp;
@@ -141,7 +141,7 @@ static inline thread_t* scheduler_pick_next_thread_on_core(uint32_t const cpuid)
   return next;
 }
 
-__attribute__((used)) static thread_t* scheduler_pick_next_thread(void)
+__attribute__((used, unused)) static thread_t* scheduler_pick_next_thread(void)
 {
   thread_t* next = scheduler_pick_next_thread_on_core(CPUID);
   if (next == NULL)
@@ -151,7 +151,7 @@ __attribute__((used)) static thread_t* scheduler_pick_next_thread(void)
   return next != NULL ? next : &idle_thread[CPUID];
 }
 
-__attribute__((used)) static uintptr_t scheduler_switch_to(thread_t* next)
+__attribute__((used, unused)) static uintptr_t scheduler_switch_to(thread_t* next)
 {
   thread_t* current = current_thread[CPUID];
   ATOM_ASSERT(*current->stack_base == THREAD_STACK_CANARY, "Stack overflow detected in thread");
