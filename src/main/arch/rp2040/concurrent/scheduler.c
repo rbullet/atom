@@ -47,9 +47,9 @@
 
 #define THREAD_STACK_CANARY 0xDEADBEEF
 
-spinlock_t* scheduler_spinlock = NULL;
-spinlock_t* thread_spinlock = NULL;
-spinlock_t* deferred_tasks_spinlock = NULL;
+static spinlock_t* scheduler_spinlock[CPU_COUNT] = {NULL, NULL};
+static spinlock_t* thread_spinlock = NULL;
+static spinlock_t* deferred_tasks_spinlock = NULL;
 
 static duration_t const scheduler_task_quantum = DURATION_INITIALIZER(10, MILLISECONDS);
 
@@ -87,7 +87,7 @@ static __attribute__((noreturn)) void scheduler_thread_terminate_current(void* r
 void scheduler_request_context_switch(void);
 
 // --- Thread Queues ---
-static list_t ready_queue = LIST_INITIALIZER;
+static list_t ready_queue[CPU_COUNT] = {LIST_INITIALIZER, LIST_INITIALIZER};
 static sorted_list_t deferred_tasks_queue = SORTED_LIST_INITIALIZER(scheduler_deferred_task_expiration_comparator);
 
 // --- SysTick Handler ---
@@ -112,9 +112,10 @@ void scheduler_sys_tick_handler(void)
       }
     }
   }
-  WITH_SPINLOCK(scheduler_spinlock)
+  WITH_SPINLOCK(scheduler_spinlock[CPUID])
   {
-    if (!list_is_empty(&ready_queue) && (scheduler_timestamp_is_expired(current_thread[CPUID]->deadline) || (current_thread[CPUID] == &idle_thread[CPUID])))
+    if (!list_is_empty(&ready_queue[CPUID]) && (scheduler_timestamp_is_expired(current_thread[CPUID]->deadline) || (
+      current_thread[CPUID] == &idle_thread[CPUID])))
     {
       scheduler_request_context_switch();
     }
@@ -127,14 +128,27 @@ __attribute__((used)) static void scheduler_save_current_sp(uint32_t* sp)
   current_thread[CPUID]->sp = sp;
 }
 
-__attribute__((used)) static thread_t* scheduler_pick_next_thread(void)
+static inline thread_t* scheduler_pick_next_thread_on_core(uint32_t const cpuid)
 {
   thread_t* next = NULL;
-  WITH_SPINLOCK(scheduler_spinlock)
+  WITH_SPINLOCK(scheduler_spinlock[cpuid])
   {
-    next = list_is_empty(&ready_queue) ? &idle_thread[CPUID] : CONTAINER_OF(list_pop(&ready_queue), thread_t, scheduler_node);
+    if (!list_is_empty(&ready_queue[cpuid]))
+    {
+      next = CONTAINER_OF(list_pop(&ready_queue[cpuid]), thread_t, scheduler_node);
+    }
   }
   return next;
+}
+
+__attribute__((used)) static thread_t* scheduler_pick_next_thread(void)
+{
+  thread_t* next = scheduler_pick_next_thread_on_core(CPUID);
+  if (next == NULL)
+  {
+    next = scheduler_pick_next_thread_on_core((CPUID + 1) % CPU_COUNT);
+  }
+  return next != NULL ? next : &idle_thread[CPUID];
 }
 
 __attribute__((used)) static uintptr_t scheduler_switch_to(thread_t* next)
@@ -244,7 +258,8 @@ static void scheduler_thread_init_bootstrap(thread_t* thread, uint32_t* stack_ba
 }
 
 // --- Thread Initialisation ---
-void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const stack_size, thread_func_t const start_routine, void* arg)
+void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const stack_size,
+                           thread_func_t const start_routine, void* arg)
 {
   scheduler_thread_init_common(thread, stack_base, stack_size);
   // Initialize thread stack and context
@@ -301,12 +316,12 @@ void scheduler_thread_start(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(scheduler_spinlock[CPUID])
     {
       ATOM_ASSERT(thread->state == THREAD_READY, "Only ready threads can be started");
       if (thread != &idle_thread[CPUID])
       {
-        list_push(&ready_queue, &thread->scheduler_node);
+        list_push(&ready_queue[CPUID], &thread->scheduler_node);
       }
     }
   }
@@ -316,14 +331,14 @@ void scheduler_thread_resume(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(scheduler_spinlock[CPUID])
     {
       switch (thread->state)
       {
       case THREAD_BLOCKED:
       case THREAD_SLEEPING:
         thread->state = THREAD_READY;
-        list_push(&ready_queue, &thread->scheduler_node);
+        list_push(&ready_queue[CPUID], &thread->scheduler_node);
         break;
       case THREAD_RUNNING:
       case THREAD_READY:
@@ -340,11 +355,11 @@ void scheduler_thread_return_current_to_queue()
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(scheduler_spinlock[CPUID])
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_READY;
-      list_push(&ready_queue, &thread->scheduler_node);
+      list_push(&ready_queue[CPUID], &thread->scheduler_node);
     }
   }
 }
@@ -353,7 +368,7 @@ void scheduler_thread_block_current()
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(scheduler_spinlock[CPUID])
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_BLOCKED;
@@ -366,7 +381,7 @@ void scheduler_thread_block_current_on(list_t* wait_queue, spinlock_t* guarded_b
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(scheduler_spinlock[CPUID])
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_BLOCKED;
@@ -397,7 +412,7 @@ void scheduler_thread_sleep_current(duration_t const duration)
   WITH_INTERRUPTS_DISABLED
   {
     thread_t* thread = scheduler_current_running_thread();
-    WITH_SPINLOCK(scheduler_spinlock)
+    WITH_SPINLOCK(scheduler_spinlock[CPUID])
     {
       thread->state = THREAD_SLEEPING;
     }
@@ -627,7 +642,7 @@ __attribute__((noreturn)) static void scheduler_enter_idle(void)
 
 void scheduler_init(void)
 {
-  spinlock_pool_ensure_initialized(&scheduler_spinlock, SPINLOCK_EXCLUSIVE);
+  spinlock_pool_ensure_initialized(&scheduler_spinlock[CPUID], SPINLOCK_EXCLUSIVE);
   spinlock_pool_ensure_initialized(&thread_spinlock, SPINLOCK_EXCLUSIVE);
   spinlock_pool_ensure_initialized(&deferred_tasks_spinlock, SPINLOCK_EXCLUSIVE);
   if (CPU_IS_CORE_0)
@@ -657,7 +672,9 @@ void scheduler_init(void)
 // --- Boot Core 1 ---
 static void scheduler_boot_core_1(void)
 {
-  uint32_t const release_sequence[] = {0, 0, 1, (uint32_t)&relocated_vector_table, (uint32_t)&_emsp1, (uint32_t)scheduler_init};
+  uint32_t const release_sequence[] = {
+    0, 0, 1, (uint32_t)&relocated_vector_table, (uint32_t)&_emsp1, (uint32_t)scheduler_init
+  };
   uint32_t const size = ARRAY_SIZE(release_sequence);
   while (!cpu_fifo_write_echoed(release_sequence, size));
 }
