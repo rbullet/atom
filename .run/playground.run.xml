@@ -1,0 +1,7 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="playground" type="CompoundRunConfigurationType">
+    <toRun name="playground-core0" type="com.jetbrains.cidr.embedded.openocd.conf.type" />
+    <toRun name="playground-core1" type="CLion_Remote" />
+    <method v="2" />
+  </configuration>
+</component>

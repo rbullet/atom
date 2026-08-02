@@ -1,0 +1,6 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="playground-core1" type="CLion_Remote" version="1" toolchain="" remoteCommand=":3334" symbolFile="$PROJECT_DIR$/examples/00_developer_playground/build/00_developer_playground" sysroot="">
+    <debugger kind="GDB" isBundled="true" />
+    <method v="2" />
+  </configuration>
+</component>
