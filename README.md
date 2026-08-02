@@ -5,6 +5,7 @@
 [![Platform: RP2040](https://img.shields.io/badge/Platform-RP2040-green.svg)](https://www.raspberrypi.com/products/rp2040/)
 [![Architecture: ARM Cortex--M0+](https://img.shields.io/badge/Architecture-ARM%20Cortex--M0%2B-orange.svg)](https://developer.arm.com/Processors/Cortex-M0-Plus)
 [![Build System: CMake](https://img.shields.io/badge/Build-CMake-red.svg)](...)
+![Build Status](https://github.com/rbullet/atom/actions/workflows/cmake-single-platform.yml/badge.svg)
 
 **ATOM** is a lightweight educational bare-metal SMP framework for the Raspberry Pi Pico (RP2040).
 
