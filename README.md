@@ -510,13 +510,30 @@ log_info("System initialized with version %d", version);
 
 # Documentation
 
-For implementation details, see the documents in the `doc/` directory.
+The project documentation is generated with **Doxygen** using the excellent
+[Doxygen Awesome](https://jothepro.github.io/doxygen-awesome-css/) theme by
+Jan T. Schaub.
 
-Generate the complete API reference with Doxygen:
+Generate the complete API reference with:
 
 ```bash
 ninja doc
 ```
+
+After the build completes, a convenience symlink is created at:
+
+```text
+doc/index.html
+```
+
+which points to the generated documentation in:
+
+```text
+${CMAKE_BINARY_DIR}/doc/html/index.html
+```
+
+This allows the documentation to be opened directly from the repository without
+having to navigate into the build directory.
 
 ---
 
@@ -629,6 +646,11 @@ See the LICENSE file.
 # Acknowledgments
 
 ATOM draws inspiration from established embedded kernels such as FreeRTOS and Zephyr while remaining an independent implementation.
+
+Special thanks to the Doxygen Awesome project for providing the documentation
+theme used by ATOM.
+
+- https://jothepro.github.io/doxygen-awesome-css/
 
 ---
 

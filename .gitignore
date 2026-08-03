@@ -115,6 +115,9 @@ venv/
 # generated/
 /include/atom_config.h
 
+# Generated symlink to documentation
+/doc/index.html
+
 # Linker scripts generated from the architecture template.
 examples/*/linker.ld
 

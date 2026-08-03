@@ -44,4 +44,12 @@ if (Doxygen_FOUND)
             COMMENT "Generating API documentation with Doxygen"
             VERBATIM
     )
+
+    add_custom_command(
+            TARGET doc POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E create_symlink
+            "${CMAKE_BINARY_DIR}/doc/html/index.html"
+            "${CMAKE_SOURCE_DIR}/doc/index.html"
+    )
+
 endif()
