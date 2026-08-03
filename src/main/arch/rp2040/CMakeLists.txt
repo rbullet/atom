@@ -7,70 +7,58 @@ set(CPU_OPTIONS
         -mfloat-abi=soft
 )
 
-set(CPU_FREQUENCY
-        125000000
-        CACHE STRING
-        "CPU frequency in Hz"
-)
+set(CPU_FREQUENCY 125000000 CACHE STRING "CPU frequency in Hz")
 
-set(UART_BAUD_RATE
-        115200
-        CACHE STRING
-        "Default UART baud rate"
-)
+set(UART_BAUD_RATE 115200 CACHE STRING "Default UART baud rate")
 
 # ------------------------------------------------------------------------------
 # Generate configuration
 # ------------------------------------------------------------------------------
 configure_file(
-        ${CMAKE_SOURCE_DIR}/include/atom_config.h.in
-        ${CMAKE_SOURCE_DIR}/include/atom_config.h
+        "${CMAKE_SOURCE_DIR}/include/atom_config.h.in"
+        "${CMAKE_SOURCE_DIR}/include/atom_config.h"
         @ONLY
 )
 
 # ------------------------------------------------------------------------------
 # RP2040 sources
 # ------------------------------------------------------------------------------
-target_sources(atom PRIVATE
+target_sources(${PROJECT_NAME} PRIVATE
 
-        libc.c
+        "${CMAKE_CURRENT_SOURCE_DIR}/libc.c"
 
-        ${CMAKE_SOURCE_DIR}/src/main/libc.c
+        "${CMAKE_SOURCE_DIR}/src/main/libc.c"
 
-        boot/startup.c
-        boot/checksum.c
-        boot/board.c
+        "${CMAKE_CURRENT_SOURCE_DIR}/boot/startup.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/boot/checksum.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/boot/board.c"
 
-        io/uart.c
-        io/gpio.c
+        "${CMAKE_CURRENT_SOURCE_DIR}/io/uart.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/io/gpio.c"
 
-        concurrent/interrupts.c
-        concurrent/thread.c
-        concurrent/spinlock.c
-        concurrent/scheduler.c
-        concurrent/mutex.c
-        concurrent/semaphore.c
-        concurrent/condition_variable.c
-        concurrent/deferred_task.c
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/interrupts.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/thread.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/spinlock.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/scheduler.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/mutex.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/semaphore.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/condition_variable.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/deferred_task.c"
 
-        util/time/timestamp.c
+        "${CMAKE_CURRENT_SOURCE_DIR}/util/time/timestamp.c"
 
-        system/pll.c
-        system/clocks.c
-        system/cpu.c
+        "${CMAKE_CURRENT_SOURCE_DIR}/system/pll.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/system/clocks.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/system/cpu.c"
 )
 
 # ------------------------------------------------------------------------------
 # Private RP2040 headers
 # ------------------------------------------------------------------------------
-target_include_directories(atom PRIVATE
-        ${CMAKE_CURRENT_SOURCE_DIR}/include
-)
+target_include_directories(${PROJECT_NAME} PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/include")
 
 # ------------------------------------------------------------------------------
 # CPU flags
 # ------------------------------------------------------------------------------
-target_compile_options(atom PRIVATE
-        ${CPU_OPTIONS}
-)
+target_compile_options(${PROJECT_NAME} PRIVATE ${CPU_OPTIONS})
 

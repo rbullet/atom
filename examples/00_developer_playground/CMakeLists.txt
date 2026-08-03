@@ -1,7 +1,7 @@
 # ------------------------------------------------------------------------------
 # Example name
 # ------------------------------------------------------------------------------
-get_filename_component(EXAMPLE_NAME ${CMAKE_CURRENT_SOURCE_DIR} NAME)
+get_filename_component(EXAMPLE_NAME "${CMAKE_CURRENT_SOURCE_DIR}" NAME)
 
 if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main.c")
 
@@ -14,8 +14,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main.c")
     # This keeps the example self-contained and allows it to be copied
     # as a standalone ATOM project.
     configure_file(
-            ${CMAKE_SOURCE_DIR}/src/main/arch/rp2040/linker.ld
-            ${CMAKE_CURRENT_SOURCE_DIR}/linker.ld
+            "${CMAKE_SOURCE_DIR}/src/main/arch/rp2040/linker.ld"
+            "${CMAKE_CURRENT_SOURCE_DIR}/linker.ld"
             COPYONLY
     )
 
@@ -34,15 +34,13 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main.c")
     # Executable
     # ------------------------------------------------------------------------------
     add_executable(${EXAMPLE_NAME}
-            main.c
+            "${CMAKE_CURRENT_SOURCE_DIR}/main.c"
     )
 
     # ------------------------------------------------------------------------------
     # Output directory
     # ------------------------------------------------------------------------------
-    set_target_properties(${EXAMPLE_NAME} PROPERTIES
-            RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/build
-    )
+    set_target_properties(${EXAMPLE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/build")
 
     # ------------------------------------------------------------------------------
     # Compile options
@@ -58,7 +56,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main.c")
     target_link_libraries(${EXAMPLE_NAME}
             PRIVATE
             "-Wl,--whole-archive"
-            atom
+            ${PROJECT_NAME}
             "-Wl,--no-whole-archive"
     )
 
@@ -67,7 +65,8 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/main.c")
     # ------------------------------------------------------------------------------
     target_link_options(${EXAMPLE_NAME}
             PRIVATE
-            -T${CMAKE_CURRENT_SOURCE_DIR}/linker.ld
+            -T
+            "${CMAKE_CURRENT_SOURCE_DIR}/linker.ld"
             ${CPU_OPTIONS}
             --specs=nano.specs
     )
