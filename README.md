@@ -470,6 +470,30 @@ project.
 Non-blocking variants are available for contended resources
 (`mutex_try_lock()`, `semaphore_try_acquire()`).
 
+## Hardware Resource Ownership
+
+ATOM manages RP2040 hardware spinlocks through a centralized ownership
+allocator.
+
+Applications do not directly access hardware spinlock registers. Instead,
+they request spinlocks through the public API, allowing ATOM to track resource
+ownership, prevent conflicts, and reserve synchronization resources required
+by the kernel and scheduler.
+
+Applications can request:
+
+- **Exclusive spinlocks** for resources requiring dedicated ownership.
+- **Pooled spinlocks** for dynamically created synchronization objects.
+
+Pooled spinlocks are allocated from a pool of available hardware spinlocks.
+This reduces contention by allowing independent synchronization objects to use
+different hardware spinlocks instead of competing for a single shared lock.
+
+Kernel-reserved spinlocks remain private to ATOM subsystems.
+
+This approach provides predictable hardware resource management while keeping
+the SMP implementation isolated from application code.
+
 ---
 
 # Peripheral Drivers
@@ -615,11 +639,6 @@ Current limitations include:
 - No userspace/kernel separation
 - Application-managed thread stacks
 - Blocking-only UART driver (no interrupt-driven/async I/O)
-- `duration_t` uses `float`; the Cortex-M0+ has no hardware FPU, so duration
-  arithmetic is done in software
-- Hardware spinlocks are managed internally by the ATOM spinlock subsystem.
-  Applications must acquire spinlocks through the allocator API rather than
-  accessing hardware registers directly.
 
 ---
 
