@@ -120,3 +120,6 @@ examples/*/linker.ld
 
 # Remove 00_developer_playground from git tracking
 /examples/00_developer_playground/*
+!/examples/00_developer_playground/CMakeLists.txt
+!/examples/00_developer_playground/README.md
+
