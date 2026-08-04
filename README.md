@@ -472,7 +472,6 @@ project.
 | Deferred Task | Delayed or periodic callbacks |
 | Interrupt Control | Scoped interrupt masking |
 | Scoped Guards | `WITH_MUTEX` / `WITH_SEMAPHORE` / `WITH_INTERRUPTS_DISABLED` blocks |
-| Scoped Guards | `WITH_MUTEX` / `WITH_SEMAPHORE` / `WITH_INTERRUPTS_DISABLED` blocks |
 
 Non-blocking variants are available for contended resources
 (`mutex_try_lock()`, `semaphore_try_acquire()`).
