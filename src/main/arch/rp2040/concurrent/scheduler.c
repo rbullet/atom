@@ -245,6 +245,7 @@ static void scheduler_thread_init_common(thread_t* thread, uint32_t* stack_base,
   thread->waiters = LIST_INITIALIZER;
   thread->mutex = MUTEX_INITIALIZER;
   thread->completion = CONDITION_VARIABLE_INITIALIZER;
+  thread->wait_param = NULL;
   thread->retval = NULL;
 }
 
@@ -258,8 +259,7 @@ static void scheduler_thread_init_bootstrap(thread_t* thread, uint32_t* stack_ba
 }
 
 // --- Thread Initialisation ---
-void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const stack_size,
-                           thread_func_t const start_routine, void* arg)
+void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const stack_size, thread_func_t const start_routine, void* arg)
 {
   scheduler_thread_init_common(thread, stack_base, stack_size);
   // Initialize thread stack and context

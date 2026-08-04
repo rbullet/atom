@@ -13,7 +13,7 @@ extern "C" {
  */
 
 /**
- * @defgroup collection Collection
+ * @defgroup collections Collections
  * @brief Generic intrusive collection containers.
  * @{
  */
@@ -43,7 +43,7 @@ extern "C" {
  * list_push(&tasks, &task.node);
  * @endcode
  *
- * @ingroup collection
+ * @ingroup collections
  * @{
  */
 

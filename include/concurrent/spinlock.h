@@ -17,7 +17,7 @@ extern "C" {
 
 /**
  * @defgroup spinlock Spinlocks
- * @brief Hardware-backed cross-core synchronization primitives.
+ * @brief Hardware-backed cross-core synchronization primitives with managed resource ownership.
  *
  * Provides busy-wait locking primitives backed by hardware spinlock
  * support on the target architecture.

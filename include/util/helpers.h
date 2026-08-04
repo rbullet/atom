@@ -11,7 +11,7 @@ extern "C" {
 /**
 * @defgroup helpers Helpers
 * @ingroup util
-* @brief Low-level helper macros providing pointer and register utilities.
+* @brief Low-level helper macros for pointer, bit manipulation, and register operations.
 * @{
 */
 
@@ -47,6 +47,10 @@ extern "C" {
  * @return (void*) pointer to element at given index
  */
 #define PTR_OFFSET(ptr, index, item_size) ((void*)((uint8_t* )(ptr) + ((index) * (item_size))))
+
+#define BITS_SET(value, mask) ((value) |= (uint32_t)(mask))
+
+#define BITS_CLEAR(value, mask) ((value) &= ~(uint32_t)(mask))
 
 #define REG(base, offset)  (*(volatile uint32_t *)((volatile void *)((uintptr_t)(base) + (offset))))
 

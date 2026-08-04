@@ -20,7 +20,7 @@ extern "C" {
 
 /**
  * @defgroup thread Threads
- * @brief Lightweight preemptive threads with explicit synchronization primitives.
+ * @brief Lightweight preemptive execution contexts with explicit synchronization support.
  *
  * Provides stack-based preemptive threads with explicit scheduling,
  * sleeping, notification and joining.
@@ -71,6 +71,7 @@ typedef struct thread_t
   list_t waiters;             // Threads waiting for termination.
   mutex_t mutex;
   condition_variable_t completion;
+  void* wait_param;
   void* retval;               // Thread return value.
 } thread_t;
 

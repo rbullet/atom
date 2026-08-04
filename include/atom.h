@@ -76,6 +76,7 @@ extern "C" {
 #include "concurrent/semaphore.h"
 #include "concurrent/spinlock.h"
 #include "concurrent/thread.h"
+#include "concurrent/event_flags.h"
 
 /** @} */
 

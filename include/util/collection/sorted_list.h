@@ -14,7 +14,7 @@ extern "C" {
  */
 
 /**
- * @defgroup collection Collection
+ * @defgroup collections Collections
  * @{
  */
 
@@ -43,7 +43,7 @@ extern "C" {
  * sorted_list_t tasks = SORTED_LIST_INITIALIZER(task_before);
  * @endcode
  *
- * @ingroup collection
+ * @ingroup collections
  * @{
  */
 

@@ -14,7 +14,7 @@ extern "C" {
  */
 
 /**
- * @defgroup time_unit Time Unit
+ * @defgroup time_units Time Units
  * @brief Time unit definitions.
  * @ingroup time
  * @{

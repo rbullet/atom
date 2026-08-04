@@ -18,33 +18,32 @@ on resource-constrained microcontrollers.
 
 The project focuses on:
 
-- Simple APIs inspired by higher-level environments
-- Small and readable implementation
+- Simple, readable APIs
 - True dual-core SMP scheduling
 - Explicit resource ownership
 - No kernel heap allocation
-- Application-owned resources and thread stacks
-- Lazy allocation of internal synchronization resources
+- Application-owned stacks and resources
+- Predictable execution
 
 ---
 
 # Project History & Motivation
 
-The original goal was not to create a production RTOS, but to understand the mechanisms
-behind one by implementing them directly on a microcontroller.
+ATOM was created to understand how operating system concepts work by implementing
+them directly on a microcontroller.
 
-ATOM started as a small experimental project on an Arduino board, long before
-it became an RP2040 bare-metal framework.
+It started as a small experimental project on an Arduino board before evolving
+into an RP2040 bare-metal framework exploring scheduling, context switching,
+synchronization, and multicore execution.
 
-The name **ATOM** comes from the editor I was using at the time: the
-[Atom editor](https://atom.io/).
+The name **ATOM** comes from the editor used during the early versions of the
+project: the [Atom editor](https://atom.io/). Although the editor is no longer
+maintained, the name remained as a tribute to the tool that accompanied the
+project's beginnings.
 
-Although the editor is no longer maintained, the name remained as a small tribute
-to the tool that accompanied the first versions of the project.
-
-Over time, the project evolved from a simple embedded experiment into a complete
-exploration of operating system concepts: scheduling, context switching,
-synchronization, and multicore execution on microcontrollers.
+ATOM is not intended to compete with production RTOSes. Its goal is to provide
+a small and understandable implementation where the mechanisms behind an
+operating system can be explored.
 
 ---
 
@@ -52,23 +51,12 @@ synchronization, and multicore execution on microcontrollers.
 
 ## Highlights
 
-- Small, readable implementation
 - True dual-core SMP scheduler
 - No kernel dynamic allocation
-- `main()` is the first scheduled thread
+- `main()` as the first scheduled thread
 - Configurable CPU frequency
-- Pluggable timestamp implementation
-- Integrated C runtime support with `printf()` output through UART0 by default
-
-## Design Goals
-
-- Simple APIs
-- Small and readable implementation
-- No hidden dynamic allocation
-- Explicit ownership of resources
-- Configurable system clock
-- Independent application time source
-- Predictable execution
+- Pluggable time source
+- C runtime support with UART0 console output
 
 ## Scheduler
 
@@ -87,6 +75,7 @@ synchronization, and multicore execution on microcontrollers.
 - Recursive mutexes
 - Counting semaphores
 - Condition variables
+- Event flags
 - Hardware spinlocks
 - Deferred tasks
 - Scoped interrupt masking
@@ -181,18 +170,19 @@ demonstrating one feature in isolation:
 
 | Example | Demonstrates |
 |---|---|
-| `00_developer_playground` | Scratch template for experimenting; not built as part of the normal example set semantics, just a starting point to copy |
-| `01_hello_world` | Minimal `printf()` over the C runtime / UART0 console |
-| `02_blink` | GPIO configuration and `thread_sleep()` |
-| `03_stdin_stdout` | `printf()` / `fgets()` console echo loop |
-| `04_assert` | `ATOM_ASSERT()` usage and failure reporting |
-| `05_logging` | The logging framework (`log_info`, `log_warn`, `log_error`, `log_debug`, severity filtering) |
-| `06_timer` | Periodic callbacks via `deferred_task_start_periodic()` |
-| `07_thread` | Multiple concurrent threads (`thread_init` / `thread_start`) |
-| `08_thread_result` | `thread_join()` and retrieving a thread's return value |
-| `09_mutex` | `mutex_t` / `WITH_MUTEX` protecting a counter shared between threads |
-| `10_semaphore` | `semaphore_t` producer/consumer synchronization |
-| `11_condition_variable` | `condition_variable_t` wait/broadcast synchronization |
+| `00_developer_playground` | Scratch template |
+| `01_hello_world` | C runtime and UART output |
+| `02_blink` | GPIO and sleeping threads |
+| `03_stdin_stdout` | Console input/output |
+| `04_assert` | Assertions |
+| `05_logging` | Logging framework |
+| `06_timer` | Periodic deferred tasks |
+| `07_thread` | Multiple threads |
+| `08_thread_result` | Thread join and return values |
+| `09_mutex` | Mutex synchronization |
+| `10_semaphore` | Producer/consumer synchronization |
+| `11_condition_variable` | Wait/broadcast synchronization |
+| `12_event_flags` | Persistent event state synchronization |
 
 ---
 
@@ -245,23 +235,64 @@ application code and ATOM internals.
 
 ---
 
+---
+
+# Event Flags
+
+Event flags provide synchronization based on persistent system state.
+
+Each flag represents a condition stored as a bit:
+
+```c
+#define SYSTEM_READY  (1u << 0)
+#define DEVICE_ONLINE (1u << 1)
+
+event_flags_t events = EVENT_FLAGS_INITIALIZER;
+```
+
+Threads can wait for one or more conditions:
+
+```c
+event_flags_wait(&system_events,
+                 SYSTEM_READY | DEVICE_ONLINE,
+                 EVENT_FLAGS_ALL_SET);
+```
+
+A flag remains set until it is explicitly cleared:
+
+```c
+event_flags_set(&system_events, SYSTEM_READY);
+```
+
+Unlike notifications, event flags are not consumed by waiting threads. Multiple threads can wait for and observe the same event, and threads that start waiting after a flag has already been set continue immediately.
+
+Typical use cases:
+
+- System initialization completion
+- Peripheral readiness
+- Hardware state tracking
+- Multi-condition synchronization
+
+---
+
 # C Runtime Support
 
-ATOM integrates with the C standard library through newlib, providing a standard
-C runtime environment on bare metal.
+ATOM integrates with newlib, providing a standard C runtime environment on bare metal.
 
-Applications can use standard C APIs such as `printf()`, `puts()`, `getchar()`,
-`fgets()`, `malloc()`, and `free()` without including ATOM-specific headers.
+Applications can use standard C APIs such as:
 
-Heap usage is optional and belongs entirely to the application.
-ATOM synchronization and scheduler internals do not depend on heap allocation.
+- `printf()`
+- `puts()`
+- `getchar()`
+- `fgets()`
+- `malloc()` / `free()`
 
-For example, this standard C program can run unchanged on both a desktop operating
-system and ATOM:
+UART0 is configured as the default console, connecting stdin/stdout to the board automatically.
+
+For example, this standard C program can run on both a desktop environment and ATOM:
 
 ```c
 #include <stdio.h>
-#include <string.h>
 
 #define BUFFER_SIZE 128
 
@@ -271,47 +302,20 @@ int main(void)
 
     printf("Console echo ready.\r\n");
 
-    while (1)
+    while (fgets(buffer, sizeof(buffer), stdin) != NULL)
     {
-        printf("> ");
-
-        if (fgets(buffer, sizeof(buffer), stdin) != NULL)
-        {
-            printf("echo: %s", buffer);
-        }
+        printf("echo: %s", buffer);
     }
 
     return 0;
 }
 ```
 
-On ATOM, the board initialization configures UART0 as the default console and
-connects it to the C standard streams. Therefore, stdin, stdout, printf(),
-getchar(), puts(), and fgets() are available immediately after startup.
+ATOM provides the required newlib syscall integration, including console I/O
+and thread-safe heap support.
 
-The runtime integration provides the low-level OS glue (syscall stubs) required
-by newlib to run on bare metal, including:
-
-- Heap management:
-  - `_sbrk` (backs `malloc`, `calloc`, `realloc`, `free`)
-  - `__malloc_lock` / `__malloc_unlock` (thread/cross-core safe heap locking)
-
-- Console I/O:
-  - `_read` / `_write` (backs `printf`, `scanf`, `fgets`, `getchar`, etc., routed
-    through UART0 by default)
-
-- Misc. process stubs required to satisfy the newlib/libgcc link:
-  - `_close`, `_fstat`, `_isatty`, `_lseek`, `_exit`, `_kill`, `_getpid`,
-    `_gettimeofday`
-
-Standard functions such as `memcpy`, `memset`, `memmove`, `memcmp`, `printf`,
-and `snprintf` themselves are provided by newlib/libgcc (via `--specs=nano.specs`),
-not reimplemented by ATOM.
-
-These facilities are provided without requiring an underlying operating system.
-
-The ATOM kernel itself does not depend on dynamic allocation. Heap usage remains
-an application-level feature.
+Heap usage is optional and remains application-owned. The scheduler and
+synchronization primitives do not depend on dynamic allocation.
 
 ---
 
@@ -437,7 +441,8 @@ atom/
 │   ├── 08_thread_result/
 │   ├── 09_mutex/
 │   ├── 10_semaphore/
-│   └── 11_condition_variable/
+│   ├── 11_condition_variable/
+│   └── 12_event_flags/
 │
 ├── build/
 │   └── libatom.a
@@ -462,9 +467,11 @@ project.
 | Mutex | Recursive mutual exclusion |
 | Semaphore | Counting synchronization |
 | Condition Variable | Wait/signal synchronization |
+| Event Flags | Persistent state-based synchronization using bit flags |
 | Spinlock | Hardware-backed cross-core locking. Hardware resources are managed through the spinlock pool allocator. |
 | Deferred Task | Delayed or periodic callbacks |
 | Interrupt Control | Scoped interrupt masking |
+| Scoped Guards | `WITH_MUTEX` / `WITH_SEMAPHORE` / `WITH_INTERRUPTS_DISABLED` blocks |
 | Scoped Guards | `WITH_MUTEX` / `WITH_SEMAPHORE` / `WITH_INTERRUPTS_DISABLED` blocks |
 
 Non-blocking variants are available for contended resources
