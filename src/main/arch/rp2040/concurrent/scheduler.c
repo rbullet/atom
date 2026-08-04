@@ -80,7 +80,9 @@ static __attribute__((noreturn)) void* idle_thread_manager(void* arg);
 static __attribute__((noreturn)) void* deferred_task_manager(void* arg);
 static void scheduler_sys_tick_handler(void);
 static void scheduler_pend_sv_handler(void);
+#ifndef DEBUG
 static void scheduler_boot_core_1(void);
+#endif
 static bool scheduler_deferred_task_expiration_comparator(list_node_t const* left, list_node_t const* right);
 static void scheduler_thread_transition_to_running(thread_t* thread);
 static __attribute__((noreturn)) void scheduler_thread_terminate_current(void* retval);
@@ -661,7 +663,11 @@ void scheduler_init(void)
   if (CPU_IS_CORE_0)
   {
     scheduler_thread_start(&deferred_task_thread);
+    #ifndef DEBUG
+    log_info("Booting core 1 please make sure that you unfreeze it with GDB");
     scheduler_boot_core_1();
+    log_info("Core 1 booted successfully");
+    #endif
   }
   else
   {
@@ -669,6 +675,7 @@ void scheduler_init(void)
   }
 }
 
+#ifndef DEBUG
 // --- Boot Core 1 ---
 static void scheduler_boot_core_1(void)
 {
@@ -678,3 +685,4 @@ static void scheduler_boot_core_1(void)
   uint32_t const size = ARRAY_SIZE(release_sequence);
   while (!cpu_fifo_write_echoed(release_sequence, size));
 }
+#endif
