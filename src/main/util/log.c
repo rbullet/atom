@@ -1,14 +1,16 @@
-#include "util/log.h"
 #include <stdio.h>
 #include <time.h>
 
+#include "atom_config.h"
+#include "util/log.h"
+
 static FILE* log_stream = NULL;
 
-static char const * const LEVEL_NAMES[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
+static char const* const LEVEL_NAMES[] = {"FATAL", "ERROR", "WARN", "INFO", "DEBUG"};
 
 static log_printer_func_t log_printer_func = log_default_printer;
 
-static log_level_t log_min_level = LOG_LEVEL_INFO;
+static log_level_t log_min_level = DEFAULT_LOG_LEVEL;
 
 void log_set_output(FILE* output)
 {
@@ -25,7 +27,7 @@ void log_set_min_level(log_level_t const level)
   log_min_level = level;
 }
 
-void log_print(log_level_t level, char const* file, int line, char const* fmt, ...)
+void log_print(log_level_t const level, char const* file, int const line, char const* fmt, ...)
 {
   if (level > log_min_level)
   {
@@ -53,7 +55,7 @@ static inline char const* log_filename(char const* path)
   return file;
 }
 
-void log_default_printer(FILE* output, log_level_t level, char const* file, int line, char const* fmt, va_list args)
+void log_default_printer(FILE* output, log_level_t const level, char const* file, int const line, char const* fmt, va_list args)
 {
   fprintf(output, "[%s] %s:%d ", LEVEL_NAMES[level], log_filename(file), line);
   vfprintf(output, fmt, args);

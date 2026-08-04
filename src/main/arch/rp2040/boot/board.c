@@ -111,7 +111,7 @@ static void board_init_uart(void)
   }
   gpio_set_func(0, GPIO_FUNC_2);
   gpio_set_func(1, GPIO_FUNC_2);
-  uart_init(uart0, UART_BAUD_RATE);
+  uart_init(uart0, DEFAULT_UART_BAUD_RATE);
 }
 
 // --- Configure logging system output and level ---

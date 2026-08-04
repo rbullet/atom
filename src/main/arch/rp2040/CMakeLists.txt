@@ -9,7 +9,9 @@ set(CPU_OPTIONS
 
 set(CPU_FREQUENCY 125000000 CACHE STRING "CPU frequency in Hz")
 
-set(UART_BAUD_RATE 115200 CACHE STRING "Default UART baud rate")
+set(DEFAULT_UART_BAUD_RATE 115200 CACHE STRING "Default UART baud rate")
+
+set(DEFAULT_LOG_LEVEL LOG_LEVEL_INFO CACHE STRING "Default log level")
 
 # ------------------------------------------------------------------------------
 # Generate configuration
