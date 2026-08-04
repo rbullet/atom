@@ -76,10 +76,10 @@ static inline void reset(uint32_t const subsystems)
 {
   uint32_t const value = subsystems & RESETS_RESET_MASK;
 
-  *RESETS_RESET |= value; // assert reset
-  *RESETS_RESET &= ~value; // de-assert reset
+  REG_WRITE(RESETS_RESET, REG_READ(RESETS_RESET) | value); // assert reset
+  REG_WRITE(RESETS_RESET, REG_READ(RESETS_RESET) & ~value); // de-assert reset
 
-  while ((((*RESETS_RESET_DONE) | RESETS_RESET_UART0 | RESETS_RESET_UART1) & value) != value)
+  while (((REG_READ(RESETS_RESET_DONE) | RESETS_RESET_UART0 | RESETS_RESET_UART1) & value) != value)
   {
     __asm volatile ("nop");
   }

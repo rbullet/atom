@@ -4,82 +4,144 @@ extern "C" {
 #endif
 
 /**
-* @defgroup util Util
-* @{
-*/
+ * @defgroup util Util
+ * @{
+ */
 
 /**
-* @defgroup helpers Helpers
-* @ingroup util
-* @brief Low-level helper macros for pointer, bit manipulation, and register operations.
-* @{
-*/
+ * @defgroup helpers Helpers
+ * @ingroup util
+ * @brief Low-level helper macros for pointer, bit manipulation, and register operations.
+ * @{
+ */
 
+/**
+ * @brief Compute the address of the containing structure from a member pointer.
+ *
+ * Given a pointer to a structure member, returns a pointer to the enclosing
+ * structure instance.
+ *
+ * @param ptr    Pointer to the structure member.
+ * @param type   Type of the enclosing structure.
+ * @param member Name of the member within @p type.
+ *
+ * @return Pointer to the enclosing structure.
+ */
 #define CONTAINER_OF(ptr, type, member) ((type*)((uintptr_t)(ptr) - offsetof(type, member)))
 
 /** @cond INTERNAL */
 /**
- * @brief Internal macro: concatenates two tokens (no expansion).
+ * @brief Internal macro: concatenates two tokens without macro expansion.
  *
- * @param a first token
- * @param b second token
+ * @param a First token.
+ * @param b Second token.
  */
 #define _CAT2(a, b) a##b
 
 /**
- * @brief Internal macro: concatenates two tokens (with expansion).
+ * @brief Internal macro: concatenates two tokens with macro expansion.
  *
- * @param a first token
- * @param b second token
+ * @param a First token.
+ * @param b Second token.
  */
 #define _CAT(a, b) _CAT2(a, b)
 /** @endcond */
 
 /**
- * @brief Compute pointer to an element at a given index with an explicit item size.
+ * @brief Compute a pointer to an element at a given index.
  *
- * This is a low-level helper to perform pointer arithmetic on untyped memory.
+ * Performs pointer arithmetic on untyped memory using an explicit element size.
  *
- * @param ptr        base pointer
- * @param index      index of the element
- * @param item_size  size (in bytes) of one element at that pointer
+ * @param ptr       Base pointer.
+ * @param index     Zero-based element index.
+ * @param item_size Size, in bytes, of each element.
  *
- * @return (void*) pointer to element at given index
+ * @return Pointer to the indexed element.
  */
-#define PTR_OFFSET(ptr, index, item_size) ((void*)((uint8_t* )(ptr) + ((index) * (item_size))))
+#define PTR_OFFSET(ptr, index, item_size) ((void*)((uint8_t*)(ptr) + ((index) * (item_size))))
 
+/**
+ * @brief Set one or more bits.
+ *
+ * Sets all bits specified by @p mask in @p value.
+ *
+ * @param value Lvalue to modify.
+ * @param mask  Bit mask of bits to set.
+ */
 #define BITS_SET(value, mask) ((value) |= (uint32_t)(mask))
 
+/**
+ * @brief Clear one or more bits.
+ *
+ * Clears all bits specified by @p mask in @p value.
+ *
+ * @param value Lvalue to modify.
+ * @param mask  Bit mask of bits to clear.
+ */
 #define BITS_CLEAR(value, mask) ((value) &= ~(uint32_t)(mask))
 
-#define REG(base, offset)  (*(volatile uint32_t *)((volatile void *)((uintptr_t)(base) + (offset))))
-
 /**
- * @brief Extract a bit-field from a register value.
+ * @brief Compute the address of a memory-mapped 32-bit register.
  *
- * The field must provide `<field>_MASK` and `<field>_OFFSET` defines.
+ * Returns a pointer to a 32-bit volatile register located at the specified
+ * base address and byte offset.
  *
- * @param reg   the register value
- * @param field field base name
+ * @param base   Peripheral base address.
+ * @param offset Register byte offset.
  *
- * @return extracted field value (right-shifted)
+ * @return Pointer to the register.
  */
-#define REG_GET_FIELD(reg, field)  (((reg) & ((uint32_t)field##_MASK)) >> (field##_OFFSET))
+#define REG(base, offset) ((volatile uint32_t *)((uintptr_t)(base) + (offset)))
 
 /**
- * @brief Write a field inside a register.
+ * @brief Read a 32-bit memory-mapped register.
  *
- * The field must provide `<field>_MASK` and `<field>_OFFSET` defines.
+ * @param reg Pointer to the register.
  *
- * @param reg   register lvalue
- * @param field field base name
- * @param value value to store
+ * @return Register value.
  */
-#define REG_SET_FIELD(reg, field, value) ((reg) = (((reg) & ~((uint32_t)field##_MASK)) | (((uint32_t)(value) << field##_OFFSET) & (uint32_t)field##_MASK)))
-
+#define REG_READ(reg) (*(reg))
 
 /**
- * @brief Returns the number of elements in a statically allocated array.
+ * @brief Write a 32-bit memory-mapped register.
+ *
+ * @param reg   Pointer to the register.
+ * @param value Value to write.
+ */
+#define REG_WRITE(reg, value) (*(reg) = (value))
+
+/**
+ * @brief Extract a bit-field from a register.
+ *
+ * Reads the field identified by @p field from the register pointed to by
+ * @p reg. The field must define the macros `<field>_MASK` and
+ * `<field>_OFFSET`.
+ *
+ * @param reg   Pointer to the register.
+ * @param field Field base name.
+ *
+ * @return Field value, right-aligned.
+ */
+#define REG_GET_FIELD(reg, field) (((*(reg)) & ((uint32_t)(field##_MASK))) >> (field##_OFFSET))
+
+/**
+ * @brief Update a bit-field within a register.
+ *
+ * Performs a read-modify-write operation on the register pointed to by
+ * @p reg. The field must define the macros `<field>_MASK` and
+ * `<field>_OFFSET`.
+ *
+ * @note This macro performs a read-modify-write operation and should only
+ * be used with registers that support it.
+ *
+ * @param reg   Pointer to the register.
+ * @param field Field base name.
+ * @param value Value to store in the field.
+ */
+#define REG_SET_FIELD(reg, field, value) ((*(reg)) = (((*(reg)) & ~((uint32_t)(field##_MASK))) | ((((uint32_t)(value)) << (field##_OFFSET)) & (uint32_t)(field##_MASK))))
+
+/**
+ * @brief Return the number of elements in a statically allocated array.
  *
  * Computes the element count of an array at compile time.
  *

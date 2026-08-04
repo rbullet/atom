@@ -75,19 +75,19 @@ typedef struct
 // --- Check if a UART mode is enabled ---
 static inline bool uart_has_mode(uart_t const* uart, uint32_t const uart_mode)
 {
-  return (REG(uart, UART0_UARTCR_OFFSET) & (uart_mode & UART_CR_MASK)) != 0;
+  return (REG_READ(REG(uart, UART0_UARTCR_OFFSET)) & (uart_mode & UART_CR_MASK)) != 0;
 }
 
 // --- Disable a UART mode ---
 static inline void uart_disable_mode(uart_t* uart, uint32_t const uart_mode)
 {
-  REG(uart, UART0_UARTCR_OFFSET) &= ~(uart_mode & UART_CR_MASK);
+  REG_WRITE(REG(uart, UART0_UARTCR_OFFSET), REG_READ(REG(uart, UART0_UARTCR_OFFSET)) & ~(uart_mode & UART_CR_MASK));
 }
 
 // --- Enable a UART mode ---
 static inline void uart_enable_mode(uart_t* uart, uint32_t const uart_mode)
 {
-  REG(uart, UART0_UARTCR_OFFSET) |= (uart_mode & UART_CR_MASK);
+  REG_WRITE(REG(uart, UART0_UARTCR_OFFSET), REG_READ(REG(uart, UART0_UARTCR_OFFSET)) | (uart_mode & UART_CR_MASK));
 }
 
 // --- Check if RX FIFO is empty ---

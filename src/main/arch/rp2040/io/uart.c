@@ -47,7 +47,7 @@ size_t uart_read(uart_t* uart, uint8_t* buffer, size_t len)
     {
       __asm volatile ("nop");
     }
-    buffer[i] = (uint8_t)(UART_UARTDR(uart));
+    buffer[i] = (uint8_t)(REG_READ(UART_UARTDR(uart)));
   }
   return len;
 }
@@ -61,7 +61,7 @@ size_t uart_write(uart_t* uart, uint8_t const* buffer, size_t len)
     {
       __asm volatile ("nop");
     }
-    UART_UARTDR(uart) = buffer[i] & 0xFF;
+    REG_WRITE(UART_UARTDR(uart), buffer[i] & 0xFF);
   }
   return len;
 }

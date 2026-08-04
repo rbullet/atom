@@ -223,7 +223,7 @@ __attribute__((naked)) void scheduler_pend_sv_handler(void)
 void scheduler_request_context_switch(void)
 {
   __asm volatile("dmb ish" ::: "memory");
-  ICSR = ICSR_PENDSVSET;
+  REG_WRITE(ICSR, ICSR_PENDSVSET);
 }
 
 
@@ -631,7 +631,7 @@ static void scheduler_init_hardware(void)
     REG_SET_FIELD(SYST_CVR, PPB_SYST_CVR_CURRENT, 0); // Clear current counter
     REG_SET_FIELD(NVIC_IPR3, PPB_NVIC_IPR3_IP_14, 3); // PendSV -> lowest priority
     REG_SET_FIELD(NVIC_IPR3, PPB_NVIC_IPR3_IP_15, 0); // Systick -> Highest priority
-    SYST_CSR = SYST_CSR_ENABLE | SYST_CSR_TICKINT | SYST_CSR_CLKSOURCE;
+    REG_WRITE(SYST_CSR, SYST_CSR_ENABLE | SYST_CSR_TICKINT | SYST_CSR_CLKSOURCE);
   }
 }
 

@@ -117,13 +117,13 @@ static inline void pll_set_postdiv2(pll_t* pll, uint32_t const postdiv2)
 // --- Disable specific PLL power mode(s) ---
 static inline void pll_disable_pwr_mode(pll_t* pll, uint32_t const pll_pwr_mode)
 {
-  PLL_PWR(pll) |= (pll_pwr_mode & PLL_PWR_MASK);
+  REG_WRITE(PLL_PWR(pll), REG_READ(PLL_PWR(pll)) | (pll_pwr_mode & PLL_PWR_MASK));
 }
 
 // --- Enable specific PLL power mode(s) ---
 static inline void pll_enable_pwr_mode(pll_t* pll, uint32_t const pll_pwr_mode)
 {
-  PLL_PWR(pll) &= ~(pll_pwr_mode & PLL_PWR_MASK);
+  REG_WRITE(PLL_PWR(pll), REG_READ(PLL_PWR(pll)) & ~(pll_pwr_mode & PLL_PWR_MASK));
 }
 
 // --- Compute PLL settings for target frequency ---

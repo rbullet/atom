@@ -76,12 +76,12 @@ static __attribute__((always_inline)) inline void cpu_stack_set_mode(stack_mode_
 // --- CPU FIFO status helpers ---
 static inline bool cpu_fifo_is_readable(void)
 {
-  return REG_GET_FIELD(*SIO_FIFO_ST, SIO_FIFO_ST_VLD);
+  return REG_GET_FIELD(SIO_FIFO_ST, SIO_FIFO_ST_VLD);
 }
 
 static inline bool cpu_fifo_is_writable(void)
 {
-  return REG_GET_FIELD(*SIO_FIFO_ST, SIO_FIFO_ST_RDY);
+  return REG_GET_FIELD(SIO_FIFO_ST, SIO_FIFO_ST_RDY);
 }
 
 // --- CPU FIFO blocking write ---

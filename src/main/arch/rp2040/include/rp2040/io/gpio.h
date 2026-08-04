@@ -63,16 +63,16 @@ static inline void gpio_set_resistor(uint32_t const pin, gpio_pull_t const pull)
   switch (pull)
   {
   case GPIO_PULL_UP:
-    REG_SET_FIELD(*pads_bank0_gpio, PADS_BANK0_GPIO0_PUE, 1U);
-    REG_SET_FIELD(*pads_bank0_gpio, PADS_BANK0_GPIO0_PDE, 0U);
+    REG_SET_FIELD(pads_bank0_gpio, PADS_BANK0_GPIO0_PUE, 1U);
+    REG_SET_FIELD(pads_bank0_gpio, PADS_BANK0_GPIO0_PDE, 0U);
     break;
   case GPIO_PULL_DOWN:
-    REG_SET_FIELD(*pads_bank0_gpio, PADS_BANK0_GPIO0_PDE, 1U);
-    REG_SET_FIELD(*pads_bank0_gpio, PADS_BANK0_GPIO0_PUE, 0U);
+    REG_SET_FIELD(pads_bank0_gpio, PADS_BANK0_GPIO0_PDE, 1U);
+    REG_SET_FIELD(pads_bank0_gpio, PADS_BANK0_GPIO0_PUE, 0U);
     break;
   default:
-    REG_SET_FIELD(*pads_bank0_gpio, PADS_BANK0_GPIO0_PDE, 0U);
-    REG_SET_FIELD(*pads_bank0_gpio, PADS_BANK0_GPIO0_PUE, 0U);
+    REG_SET_FIELD(pads_bank0_gpio, PADS_BANK0_GPIO0_PDE, 0U);
+    REG_SET_FIELD(pads_bank0_gpio, PADS_BANK0_GPIO0_PUE, 0U);
     break;
   }
 }
@@ -80,7 +80,7 @@ static inline void gpio_set_resistor(uint32_t const pin, gpio_pull_t const pull)
 static inline void gpio_set_func(uint32_t const pin, gpio_func_enum const gpio_func)
 {
   volatile uint32_t* io_bank0_gpio = (IO_BANK0_GPIO0_CTRL + (pin * 2));
-  REG_SET_FIELD(*io_bank0_gpio, IO_BANK0_GPIO0_CTRL_FUNCSEL, gpio_func);
+  REG_SET_FIELD(io_bank0_gpio, IO_BANK0_GPIO0_CTRL_FUNCSEL, gpio_func);
 }
 
 #ifdef __cplusplus

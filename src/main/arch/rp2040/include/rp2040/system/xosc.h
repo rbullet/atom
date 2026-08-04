@@ -59,55 +59,55 @@ typedef enum
 // --- Clear bad write bit in XOSC ---
 static inline void xosc_clear_badwrite_bit(void)
 {
-  REG_SET_FIELD(*XOSC_STATUS, XOSC_STATUS_BADWRITE, 1);
+  REG_SET_FIELD(XOSC_STATUS, XOSC_STATUS_BADWRITE, 1);
 }
 
 // --- Get crystal oscillator frequency range ---
 static inline xosc_ctrl_freq_range_enum xosc_get_freq_range()
 {
-  return REG_GET_FIELD(*XOSC_CTRL, XOSC_CTRL_FREQ_RANGE);
+  return REG_GET_FIELD(XOSC_CTRL, XOSC_CTRL_FREQ_RANGE);
 }
 
 // --- Set crystal oscillator frequency range ---
 static inline void xosc_set_freq_range(xosc_ctrl_freq_range_enum const freq)
 {
-  REG_SET_FIELD(*XOSC_CTRL, XOSC_CTRL_FREQ_RANGE, freq);
+  REG_SET_FIELD(XOSC_CTRL, XOSC_CTRL_FREQ_RANGE, freq);
 }
 
 // --- Check if XOSC is stable ---
 static inline bool xosc_is_stable(void)
 {
-  return REG_GET_FIELD(*XOSC_STATUS, XOSC_STATUS_STABLE);
+  return REG_GET_FIELD(XOSC_STATUS, XOSC_STATUS_STABLE);
 }
 
 // --- Enable or disable XOSC ---
 static inline void xosc_set_enable(bool const enable)
 {
-  REG_SET_FIELD(*XOSC_CTRL, XOSC_CTRL_ENABLE, (enable ? XOSC_CTRL_ENABLE : XOSC_CTRL_DISABLE));
+  REG_SET_FIELD(XOSC_CTRL, XOSC_CTRL_ENABLE, (enable ? XOSC_CTRL_ENABLE : XOSC_CTRL_DISABLE));
 }
 
 // --- Get startup delay for XOSC ---
 static inline xosc_startup_delay_enum xosc_get_startup_delay()
 {
-  return REG_GET_FIELD(*XOSC_STARTUP, XOSC_STARTUP_DELAY);
+  return REG_GET_FIELD(XOSC_STARTUP, XOSC_STARTUP_DELAY);
 }
 
 // --- Set startup delay for XOSC ---
 static inline void xosc_set_startup_delay(xosc_startup_delay_enum const delay)
 {
-  REG_SET_FIELD(*XOSC_STARTUP, XOSC_STARTUP_DELAY, delay);
+  REG_SET_FIELD(XOSC_STARTUP, XOSC_STARTUP_DELAY, delay);
 }
 
 // --- Get dormant/wake state ---
 static inline xosc_dormant_enum xosc_get_dormant()
 {
-  return *XOSC_DORMANT;
+  return REG_READ(XOSC_DORMANT);
 }
 
 // --- Set dormant/wake state ---
 static inline void xosc_set_dormant(xosc_dormant_enum const dormant)
 {
-  *XOSC_DORMANT = dormant;
+  REG_WRITE(XOSC_DORMANT, dormant);
 }
 
 #ifdef __cplusplus
