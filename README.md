@@ -235,46 +235,6 @@ application code and ATOM internals.
 
 ---
 
----
-
-# Event Flags
-
-Event flags provide synchronization based on persistent system state.
-
-Each flag represents a condition stored as a bit:
-
-```c
-#define SYSTEM_READY  (1u << 0)
-#define DEVICE_ONLINE (1u << 1)
-
-event_flags_t events = EVENT_FLAGS_INITIALIZER;
-```
-
-Threads can wait for one or more conditions:
-
-```c
-event_flags_wait(&system_events,
-                 SYSTEM_READY | DEVICE_ONLINE,
-                 EVENT_FLAGS_ALL_SET);
-```
-
-A flag remains set until it is explicitly cleared:
-
-```c
-event_flags_set(&system_events, SYSTEM_READY);
-```
-
-Unlike notifications, event flags are not consumed by waiting threads. Multiple threads can wait for and observe the same event, and threads that start waiting after a flag has already been set continue immediately.
-
-Typical use cases:
-
-- System initialization completion
-- Peripheral readiness
-- Hardware state tracking
-- Multi-condition synchronization
-
----
-
 # C Runtime Support
 
 ATOM integrates with newlib, providing a standard C runtime environment on bare metal.
