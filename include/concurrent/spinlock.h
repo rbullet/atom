@@ -2,7 +2,6 @@
 
 #ifdef __cplusplus
 extern "C" {
-
 #endif
 
 #include <stdint.h>
@@ -17,180 +16,111 @@ extern "C" {
 
 /**
  * @defgroup spinlock Spinlocks
- * @brief Hardware-backed cross-core synchronization primitives with managed resource ownership.
+ * @brief Busy-wait synchronization primitives.
  *
- * Provides busy-wait locking primitives backed by hardware spinlock
- * support on the target architecture.
+ * Provides lightweight locking primitives for protecting shared data
+ * accessed concurrently from multiple callers.
  *
- * Spinlocks are intended for very short critical sections shared between
- * cores or between interrupt and thread contexts.
+ * The implementation is architecture-defined and may rely on
+ * architecture-specific synchronization mechanisms.
  *
- * Spinlocks do not provide thread blocking. For thread-to-thread
- * synchronization, use higher-level primitives such as mutexes or
- * notifications.
+ * Spinlocks are intended for extremely short critical sections and do not
+ * block the caller. For synchronization requiring blocking, use higher-level
+ * primitives such as mutexes, semaphores, condition variables, or event flags.
  *
  * @ingroup concurrent
  * @{
  */
 
-
 /**
- * @brief Hardware spinlock type.
+ * @brief Spinlock object.
  *
- * A spinlock represents an architecture-provided atomic locking primitive.
+ * Represents a synchronization primitive used to serialize access to
+ * shared data.
  *
- * The exact acquisition and release semantics are defined by the target
- * architecture implementation.
+ * Spinlocks are initialized to the unlocked state by zero initialization
+ * or by using #SPINLOCK_INITIALIZER.
  */
-typedef volatile uint32_t spinlock_t;
-
-/**
- * @brief Spinlock reservation policy.
- */
-typedef enum
+typedef struct
 {
-  /**
-   * @brief Reserves a spinlock exclusively for the caller.
-   *
-   * The returned spinlock is guaranteed not to be shared with any other
-   * reservation until it is returned to the pool.
-   *
-   * If no exclusive spinlock is available, the reservation fails and an
-   * assertion is raised.
-   */
-  SPINLOCK_EXCLUSIVE,
+  volatile uint32_t locked;
+} spinlock_t;
 
-  /**
-   * @brief Reserves a spinlock from the shared pool.
-   *
-   * Pooled spinlocks are intended for lightweight synchronization objects
-   * where occasional contention between unrelated resources is acceptable.
-   *
-   * Multiple logical synchronization objects may share the same hardware
-   * spinlock. The allocator balances usage between available pooled locks.
-   */
-  SPINLOCK_POOLED
-
-} spinlock_reservation_t;
+#define SPINLOCK_UNLOCKED 0u
+#define SPINLOCK_LOCKED   1u
 
 /**
- * @brief Lazily initializes a spinlock resource.
- *
- * Allocates a spinlock from the requested reservation class if the pointer
- * is currently NULL.
- *
- * This helper is intended for synchronization objects supporting static
- * initialization. The first use transparently acquires the required
- * hardware resource.
- *
- * @param lock Address of the spinlock pointer to initialize.
- * @param type Reservation policy.
- *
- * @pre lock must not be NULL.
+ * @brief Static spinlock initializer.
  */
-void spinlock_pool_ensure_initialized(spinlock_t** lock, spinlock_reservation_t type);
-
-/**
- * @brief Reserves a spinlock from the pool.
- *
- * @param type Reservation policy.
- *
- * @return Reserved spinlock.
- *
- * @note Exclusive reservations are unique until returned to the pool.
- *
- * @note Pooled reservations may reuse spinlocks that are already assigned
- * to other pooled resources in order to minimize contention while avoiding
- * allocation failures.
- */
-spinlock_t* spinlock_pool_reserve(spinlock_reservation_t type);
-
-
-/**
- * @brief Returns a spinlock to the pool.
- *
- * Releases a reservation previously obtained from
- * spinlock_pool_reserve().
- *
- * For exclusive reservations, the hardware spinlock becomes available for
- * another exclusive allocation.
- *
- * For pooled reservations, the usage count is decremented so the allocator
- * can rebalance future pooled allocations.
- *
- * @param lock Spinlock to return.
- */
-void spinlock_pool_return(spinlock_t const* lock);
-
+#define SPINLOCK_INITIALIZER { .locked = SPINLOCK_UNLOCKED }
 
 /**
  * @brief Acquire a spinlock.
  *
- * Busy-waits until the lock becomes available.
+ * Busy-waits until the spinlock becomes available and acquires it.
  *
- * This operation is intended for short critical sections only. The caller
- * must not perform operations that may block while holding the lock.
+ * This function is intended for extremely short critical sections.
+ * The caller must not perform operations that may block while holding
+ * the spinlock.
  *
- * @param lock Pointer to a hardware spinlock register.
+ * @param spinlock Pointer to the spinlock to acquire.
  *
- * @pre lock must reference a valid RP2040 hardware spinlock.
+ * @post The caller owns the spinlock.
  *
- * @post The calling core owns the spinlock.
+ * @note Safe to call from both thread and interrupt context.
  *
- * @note Safe from thread and interrupt context.
+ * @warning Do not call thread_sleep(), thread_yield(), or perform any
+ * blocking operation while holding a spinlock.
  *
- * @warning Do not call thread_sleep(), thread_yield(), or any blocking
- *          operation while holding a spinlock.
- *
- * @warning Long critical sections can stall the other core.
+ * @warning Long critical sections increase contention and reduce
+ * concurrency.
  */
-void spinlock_lock(spinlock_t* lock);
+void spinlock_lock(spinlock_t* spinlock);
 
 
 /**
  * @brief Release a spinlock.
  *
- * Releases a lock previously acquired by the calling core.
+ * Releases a spinlock previously acquired by the caller.
  *
- * @param lock Pointer to a hardware spinlock register.
+ * @param spinlock Pointer to the spinlock to release.
  *
- * @pre The calling core must currently own the spinlock.
+ * @pre The caller must currently own the spinlock.
  *
- * @post The spinlock becomes available to other cores.
+ * @post The spinlock becomes available for acquisition.
  *
- * @note Safe from thread and interrupt context.
+ * @note Safe to call from both thread and interrupt context.
  *
- * @warning Releasing an unowned spinlock results in undefined behavior.
+ * @warning Releasing a spinlock that is not owned by the caller results
+ * in undefined behavior.
  */
-void spinlock_unlock(spinlock_t* lock);
+void spinlock_unlock(spinlock_t* spinlock);
 
 
 /**
- * @brief Try to acquire a spinlock.
+ * @brief Attempt to acquire a spinlock.
  *
- * Attempts to acquire the lock and returns immediately.
+ * Attempts to acquire the spinlock without blocking.
  *
- * @param lock Pointer to a hardware spinlock register.
+ * @param spinlock Pointer to the spinlock to acquire.
  *
- * @retval true  The lock was acquired by the calling core.
- * @retval false The lock is already owned by another core.
+ * @retval true  The spinlock was successfully acquired.
+ * @retval false The spinlock is currently owned.
  *
- * @pre lock must reference a valid RP2040 hardware spinlock.
+ * @post When true is returned, the caller owns the spinlock.
  *
- * @post When true is returned, the calling core owns the lock.
- *
- * @note Safe from thread and interrupt context.
+ * @note Safe to call from both thread and interrupt context.
  */
-bool spinlock_try_lock(spinlock_t* lock);
+bool spinlock_try_lock(spinlock_t* spinlock);
 
 
 /**
  * @cond INTERNAL
  */
 
-static inline void spinlock_auto_unlock(spinlock_t** lock)
+static inline void spinlock_auto_unlock(spinlock_t** spinlock)
 {
-  spinlock_unlock(*lock);
+  spinlock_unlock(*spinlock);
 }
 
 #define _WITH_SPINLOCK_BLOCK_WITH_ID(spinlock, ID)                               \
@@ -209,29 +139,32 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
 /**
  * @brief Scoped spinlock critical section.
  *
- * Acquires the spinlock when entering the block and automatically releases
- * it when leaving the block.
+ * Acquires the spinlock when entering the scope and automatically releases
+ * it when leaving.
  *
  * This helper relies on the GCC cleanup attribute.
  *
  * Example:
  *
  * @code
- * WITH_SPINLOCK(spinlock0)
+ * static spinlock_t lock = SPINLOCK_INITIALIZER;
+ *
+ * WITH_SPINLOCK(&lock)
  * {
  *     shared_state++;
  * }
  * @endcode
  *
- * The spinlock is released automatically at the end of the scope, including
+ * The spinlock is released automatically when the scope exits, including
  * when leaving through an early return.
  *
- * @warning The protected section must remain extremely short.
+ * @warning Critical sections protected by a spinlock should remain
+ * extremely short.
  *
  * @warning Do not:
  * - sleep
  * - yield
- * - wait on a mutex
+ * - wait on synchronization primitives
  * - perform blocking operations
  * while holding a spinlock.
  */

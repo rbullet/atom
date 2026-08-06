@@ -9,11 +9,6 @@ typedef struct
 
 #define EVENT_FLAGS_WAIT_PARAM_INITIALIZER(msk, m) ((event_flags_wait_param_t){ .mask = (msk), .mode = (m) })
 
-static inline void event_flags_ensure_initialized(event_flags_t* event)
-{
-  spinlock_pool_ensure_initialized(&event->spinlock, SPINLOCK_POOLED);
-}
-
 static inline bool is_condition_met(event_flags_t const* event, event_flags_mask_t const mask, event_flags_mode_t const mode)
 {
   switch (mode)
@@ -30,67 +25,75 @@ static inline bool is_condition_met(event_flags_t const* event, event_flags_mask
 
 void event_flags_set(event_flags_t* event, event_flags_mask_t const flags)
 {
-  event_flags_ensure_initialized(event);
-  list_t resume_list = LIST_INITIALIZER;
-  WITH_SPINLOCK(event->spinlock)
+  WITH_INTERRUPTS_DISABLED
   {
-    BITS_SET(event->flags, flags);
-    list_t waiter_list = LIST_INITIALIZER;
-    while (!list_is_empty(&event->waiters))
+    list_t resume_list = LIST_INITIALIZER;
+    WITH_SPINLOCK(&event->spinlock)
     {
-      thread_t* const thread = CONTAINER_OF(list_pop(&event->waiters), thread_t, scheduler_node);
-      event_flags_wait_param_t const* const waiter = thread->wait_param;
-      if (is_condition_met(event, waiter->mask, waiter->mode))
+      BITS_SET(event->flags, flags);
+      list_t waiter_list = LIST_INITIALIZER;
+      while (!list_is_empty(&event->waiters))
       {
-        list_push(&resume_list, &thread->scheduler_node);
+        thread_t* const thread = CONTAINER_OF(list_pop(&event->waiters), thread_t, scheduler_node);
+        event_flags_wait_param_t const* const waiter = thread->wait_param;
+        if (is_condition_met(event, waiter->mask, waiter->mode))
+        {
+          list_push(&resume_list, &thread->scheduler_node);
+        }
+        else
+        {
+          list_push(&waiter_list, &thread->scheduler_node);
+        }
       }
-      else
-      {
-        list_push(&waiter_list, &thread->scheduler_node);
-      }
+      event->waiters = waiter_list;
     }
-    event->waiters = waiter_list;
-  }
-  while (!list_is_empty(&resume_list))
-  {
-    thread_t* const thread = CONTAINER_OF(list_pop(&resume_list), thread_t, scheduler_node);
-    scheduler_thread_resume(thread);
+    while (!list_is_empty(&resume_list))
+    {
+      thread_t* const thread = CONTAINER_OF(list_pop(&resume_list), thread_t, scheduler_node);
+      scheduler_thread_resume(thread);
+    }
   }
 }
 
 void event_flags_clear(event_flags_t* event, event_flags_mask_t const flags)
 {
-  event_flags_ensure_initialized(event);
-  WITH_SPINLOCK(event->spinlock)
+  WITH_INTERRUPTS_DISABLED
   {
-    BITS_CLEAR(event->flags, flags);
+    WITH_SPINLOCK(&event->spinlock)
+    {
+      BITS_CLEAR(event->flags, flags);
+    }
   }
 }
 
 void event_flags_wait(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode)
 {
-  event_flags_ensure_initialized(event);
-  spinlock_lock(event->spinlock);
-  if (is_condition_met(event, mask, mode))
+  WITH_INTERRUPTS_DISABLED
   {
-    spinlock_unlock(event->spinlock);
-    return;
-  }
-  event_flags_wait_param_t waiter = EVENT_FLAGS_WAIT_PARAM_INITIALIZER(mask, mode);
-  THREAD_WITH_WAIT_PARAM(&waiter)
-  {
-    scheduler_thread_block_current_on(&event->waiters, event->spinlock);
+    spinlock_lock(&event->spinlock);
+    if (is_condition_met(event, mask, mode))
+    {
+      spinlock_unlock(&event->spinlock);
+      return;
+    }
+    event_flags_wait_param_t waiter = EVENT_FLAGS_WAIT_PARAM_INITIALIZER(mask, mode);
+    THREAD_WITH_WAIT_PARAM(&waiter)
+    {
+      scheduler_thread_block_current_on(&event->waiters, &event->spinlock);
+    }
   }
 }
 
 bool event_flags_try_wait(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode)
 {
-  event_flags_ensure_initialized(event);
-  WITH_SPINLOCK(event->spinlock)
+  WITH_INTERRUPTS_DISABLED
   {
-    if (is_condition_met(event, mask, mode))
+    WITH_SPINLOCK(&event->spinlock)
     {
-      return true;
+      if (is_condition_met(event, mask, mode))
+      {
+        return true;
+      }
     }
   }
   return false;

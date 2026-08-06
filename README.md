@@ -334,7 +334,7 @@ ATOM builds as a static library (`libatom.a`). Application executables (includin
 the bundled examples) link against it.
 
 ```bash
-git clone https://github.com/<user>/atom
+git clone https://github.com/rbullet/atom
 cd atom
 
 mkdir cmake-build

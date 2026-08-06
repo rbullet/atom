@@ -9,6 +9,7 @@ extern "C" {
 
 #include "util/helpers.h"
 #include "util/collection/list.h"
+#include "concurrent/spinlock.h"
 
 /**
  * @defgroup concurrent Concurrent
@@ -43,7 +44,7 @@ extern "C" {
  */
 typedef struct semaphore_t
 {
-  spinlock_t* spinlock; ///< Spinlock used for protecting the semaphore state.
+  spinlock_t spinlock; ///< Spinlock used for protecting the semaphore state.
   uint32_t permits;    ///< Number of available permits.
   list_t waiters;      ///< Threads waiting for a permit.
 } semaphore_t;
@@ -63,11 +64,11 @@ typedef struct semaphore_t
  * semaphore_t resource_semaphore = SEMAPHORE_INITIALIZER(3);
  * @endcode
  */
-#define SEMAPHORE_INITIALIZER(p) \
-  ((semaphore_t){                \
-    .spinlock = NULL,            \
-    .permits = (p),              \
-    .waiters = LIST_INITIALIZER  \
+#define SEMAPHORE_INITIALIZER(p)      \
+  ((semaphore_t){                     \
+    .spinlock = SPINLOCK_INITIALIZER, \
+    .permits = (p),                   \
+    .waiters = LIST_INITIALIZER       \
   })
 
 /**

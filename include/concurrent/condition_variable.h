@@ -39,7 +39,7 @@ extern "C" {
  */
 typedef struct condition_variable_t
 {
-  spinlock_t* spinlock; ///< Lazily allocated spinlock used for protecting the condition variable state.
+  spinlock_t spinlock;  ///< Lazily allocated spinlock used for protecting the condition variable state.
   list_t waiters;       ///< Threads waiting on the condition variable.
 } condition_variable_t;
 
@@ -56,7 +56,7 @@ typedef struct condition_variable_t
  * condition_variable_t data_available = CONDITION_VARIABLE_INITIALIZER;
  * @endcode
  */
-#define CONDITION_VARIABLE_INITIALIZER ((condition_variable_t){ .spinlock = NULL, .waiters = LIST_INITIALIZER })
+#define CONDITION_VARIABLE_INITIALIZER ((condition_variable_t){ .spinlock = SPINLOCK_INITIALIZER, .waiters = LIST_INITIALIZER })
 
 /**
  * @brief Wait for a condition.

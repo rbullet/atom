@@ -47,9 +47,20 @@
 
 #define THREAD_STACK_CANARY 0xDEADBEEF
 
-static spinlock_t* scheduler_spinlock[CPU_COUNT] = {NULL, NULL};
-static spinlock_t* thread_spinlock = NULL;
-static spinlock_t* deferred_tasks_spinlock = NULL;
+typedef struct
+{
+  spinlock_t* lock;
+  thread_t* current;
+  list_t ready_queue;
+} execution_context_t;
+
+#define EXECUTION_CONTEXT_INITIALIZER ((execution_context_t) { .lock = NULL, .current = NULL, .ready_queue = LIST_INITIALIZER })
+
+static execution_context_t execution_context[CPU_COUNT] = { EXECUTION_CONTEXT_INITIALIZER, EXECUTION_CONTEXT_INITIALIZER };
+
+static spinlock_t scheduler_spinlock[CPU_COUNT] = {SPINLOCK_INITIALIZER, SPINLOCK_INITIALIZER};
+static spinlock_t thread_spinlock = SPINLOCK_INITIALIZER;
+static spinlock_t deferred_tasks_spinlock = SPINLOCK_INITIALIZER;
 
 static duration_t const scheduler_task_quantum = DURATION_INITIALIZER(10, MILLISECONDS);
 
@@ -101,7 +112,7 @@ void scheduler_sys_tick_handler(void)
     if (CPU_IS_CORE_0)
     {
       scheduler_tick++;
-      WITH_SPINLOCK(deferred_tasks_spinlock)
+      WITH_SPINLOCK(&deferred_tasks_spinlock)
       {
         if (!sorted_list_is_empty(&deferred_tasks_queue))
         {
@@ -114,10 +125,9 @@ void scheduler_sys_tick_handler(void)
       }
     }
   }
-  WITH_SPINLOCK(scheduler_spinlock[CPUID])
+  WITH_SPINLOCK(&scheduler_spinlock[CPUID])
   {
-    if (!list_is_empty(&ready_queue[CPUID]) && (scheduler_timestamp_is_expired(current_thread[CPUID]->deadline) || (
-      current_thread[CPUID] == &idle_thread[CPUID])))
+    if (!list_is_empty(&ready_queue[CPUID]) && (scheduler_timestamp_is_expired(current_thread[CPUID]->deadline) || (current_thread[CPUID] == &idle_thread[CPUID])))
     {
       scheduler_request_context_switch();
     }
@@ -133,7 +143,7 @@ __attribute__((used, unused)) static void scheduler_save_current_sp(uint32_t* sp
 static inline thread_t* scheduler_pick_next_thread_on_core(uint32_t const cpuid)
 {
   thread_t* next = NULL;
-  WITH_SPINLOCK(scheduler_spinlock[cpuid])
+  WITH_SPINLOCK(&scheduler_spinlock[cpuid])
   {
     if (!list_is_empty(&ready_queue[cpuid]))
     {
@@ -318,7 +328,7 @@ void scheduler_thread_start(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock[CPUID])
+    WITH_SPINLOCK(&scheduler_spinlock[CPUID])
     {
       ATOM_ASSERT(thread->state == THREAD_READY, "Only ready threads can be started");
       if (thread != &idle_thread[CPUID])
@@ -333,7 +343,7 @@ void scheduler_thread_resume(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock[CPUID])
+    WITH_SPINLOCK(&scheduler_spinlock[CPUID])
     {
       switch (thread->state)
       {
@@ -357,7 +367,7 @@ void scheduler_thread_return_current_to_queue()
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock[CPUID])
+    WITH_SPINLOCK(&scheduler_spinlock[CPUID])
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_READY;
@@ -370,7 +380,7 @@ void scheduler_thread_block_current()
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock[CPUID])
+    WITH_SPINLOCK(&scheduler_spinlock[CPUID])
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_BLOCKED;
@@ -383,7 +393,7 @@ void scheduler_thread_block_current_on(list_t* wait_queue, spinlock_t* guarded_b
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(scheduler_spinlock[CPUID])
+    WITH_SPINLOCK(&scheduler_spinlock[CPUID])
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->state = THREAD_BLOCKED;
@@ -414,7 +424,7 @@ void scheduler_thread_sleep_current(duration_t const duration)
   WITH_INTERRUPTS_DISABLED
   {
     thread_t* thread = scheduler_current_running_thread();
-    WITH_SPINLOCK(scheduler_spinlock[CPUID])
+    WITH_SPINLOCK(&scheduler_spinlock[CPUID])
     {
       thread->state = THREAD_SLEEPING;
     }
@@ -428,7 +438,7 @@ void scheduler_thread_terminate_current(void* retval)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(thread_spinlock)
+    WITH_SPINLOCK(&thread_spinlock)
     {
       thread_t* thread = scheduler_current_running_thread();
       thread->retval = retval;
@@ -450,13 +460,13 @@ void* scheduler_thread_join(thread_t* thread)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    spinlock_lock(thread_spinlock);
+    spinlock_lock(&thread_spinlock);
     if (thread->state == THREAD_TERMINATED)
     {
-      spinlock_unlock(thread_spinlock);
+      spinlock_unlock(&thread_spinlock);
       return thread->retval;
     }
-    scheduler_thread_block_current_on(&thread->waiters, thread_spinlock);
+    scheduler_thread_block_current_on(&thread->waiters, &thread_spinlock);
   }
   return thread->retval;
 }
@@ -474,7 +484,7 @@ void scheduler_task_schedule(deferred_task_t* deferred_task)
       deferred_task->scheduler_node = LIST_NODE_INITIALIZER;
       deferred_task->state = DEFERRED_TASK_SCHEDULED;
       deferred_task->deadline = scheduler_timestamp_add(scheduler_timestamp_now(), deferred_task->initial_delay);
-      WITH_SPINLOCK(deferred_tasks_spinlock)
+      WITH_SPINLOCK(&deferred_tasks_spinlock)
       {
         ATOM_ASSERT(deferred_task->scheduler_node.next == NULL && deferred_task->scheduler_node.previous == NULL, "Deferred task already linked");
         sorted_list_add(&deferred_tasks_queue, &deferred_task->scheduler_node);
@@ -519,7 +529,7 @@ static __attribute__((noreturn)) void* deferred_task_manager(void* const arg)
     list_t expired_tasks = LIST_INITIALIZER;
     WITH_INTERRUPTS_DISABLED
     {
-      WITH_SPINLOCK(deferred_tasks_spinlock)
+      WITH_SPINLOCK(&deferred_tasks_spinlock)
       {
         while (!sorted_list_is_empty(&deferred_tasks_queue))
         {
@@ -553,7 +563,7 @@ static __attribute__((noreturn)) void* deferred_task_manager(void* const arg)
         }
         else if (deferred_task_is_periodic(deferred_task))
         {
-          WITH_SPINLOCK(deferred_tasks_spinlock)
+          WITH_SPINLOCK(&deferred_tasks_spinlock)
           {
             deferred_task->state = DEFERRED_TASK_SCHEDULED;
             deferred_task->deadline = scheduler_timestamp_add(deferred_task->deadline, deferred_task->period);
@@ -644,9 +654,6 @@ __attribute__((noreturn)) static void scheduler_enter_idle(void)
 
 void scheduler_init(void)
 {
-  spinlock_pool_ensure_initialized(&scheduler_spinlock[CPUID], SPINLOCK_EXCLUSIVE);
-  spinlock_pool_ensure_initialized(&thread_spinlock, SPINLOCK_EXCLUSIVE);
-  spinlock_pool_ensure_initialized(&deferred_tasks_spinlock, SPINLOCK_EXCLUSIVE);
   if (CPU_IS_CORE_0)
   {
     scheduler_thread_init_bootstrap(&bootstrap_thread, (uint32_t*)&_sstack0, ((uintptr_t)&_estack0 - (uintptr_t)&_sstack0));
@@ -663,11 +670,11 @@ void scheduler_init(void)
   if (CPU_IS_CORE_0)
   {
     scheduler_thread_start(&deferred_task_thread);
-    #ifndef DEBUG
-    log_info("Booting core 1 please make sure that you unfreeze it with GDB");
+#ifndef DEBUG
+    log_debug("Booting core 1 please make sure that you unfreeze it with GDB");
     scheduler_boot_core_1();
-    log_info("Core 1 booted successfully");
-    #endif
+    log_debug("Core 1 booted successfully");
+#endif
   }
   else
   {

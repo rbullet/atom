@@ -44,7 +44,7 @@ typedef uint32_t event_flags_mask_t;
  */
 typedef struct
 {
-  spinlock_t* spinlock;
+  spinlock_t spinlock;
   event_flags_mask_t flags;
   list_t waiters;
 } event_flags_t;
@@ -70,7 +70,7 @@ typedef enum
  *
  * The object can be statically initialized using this macro.
  */
-#define EVENT_FLAGS_INITIALIZER ((event_flags_t){ .spinlock = NULL, .flags = 0, .waiters = LIST_INITIALIZER })
+#define EVENT_FLAGS_INITIALIZER ((event_flags_t){ .spinlock = SPINLOCK_INITIALIZER, .flags = 0, .waiters = LIST_INITIALIZER })
 
 /**
  * @brief Sets one or more event flags.

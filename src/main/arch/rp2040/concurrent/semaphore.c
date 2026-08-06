@@ -3,36 +3,29 @@
 #include <atom.h>
 #include "rp2040/concurrent/scheduler.h"
 
-static inline void semaphore_ensure_initialized(semaphore_t* semaphore)
-{
-  spinlock_pool_ensure_initialized(&semaphore->spinlock,SPINLOCK_POOLED);
-}
-
 void semaphore_acquire(semaphore_t* semaphore)
 {
-  semaphore_ensure_initialized(semaphore);
   WITH_INTERRUPTS_DISABLED
   {
     for (;;)
     {
-      spinlock_lock(semaphore->spinlock);
+      spinlock_lock(&semaphore->spinlock);
       if (semaphore->permits > 0)
       {
         semaphore->permits--;
-        spinlock_unlock(semaphore->spinlock);
+        spinlock_unlock(&semaphore->spinlock);
         return;
       }
-      scheduler_thread_block_current_on(&semaphore->waiters, semaphore->spinlock);
+      scheduler_thread_block_current_on(&semaphore->waiters, &semaphore->spinlock);
     }
   }
 }
 
 bool semaphore_try_acquire(semaphore_t* semaphore)
 {
-  semaphore_ensure_initialized(semaphore);
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(semaphore->spinlock)
+    WITH_SPINLOCK(&semaphore->spinlock)
     {
       if (semaphore->permits == 0)
       {
@@ -46,10 +39,9 @@ bool semaphore_try_acquire(semaphore_t* semaphore)
 
 void semaphore_release(semaphore_t* semaphore)
 {
-  semaphore_ensure_initialized(semaphore);
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(semaphore->spinlock)
+    WITH_SPINLOCK(&semaphore->spinlock)
     {
       semaphore->permits++;
       if (!list_is_empty(&semaphore->waiters))

@@ -60,7 +60,7 @@ extern "C" {
 
 /** @} */
 
-void spinlock_hardware_unlock_all(void);
+void hardware_spinlock_init(void);
 
 #ifdef __cplusplus
 }

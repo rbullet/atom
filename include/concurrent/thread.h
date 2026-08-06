@@ -62,17 +62,17 @@ typedef enum
  */
 typedef struct thread_t
 {
-  uint32_t* sp;               // Saved stack pointer.
-  uint32_t* stack_base;       // Stack memory base address.
-  size_t stack_size;          // Stack size in bytes.
-  timestamp_t deadline;       // Scheduler ticks or timeout counter.
-  thread_state_t state;    // Current execution state.
-  list_node_t scheduler_node; // Scheduler queue node.
-  list_t waiters;             // Threads waiting for termination.
+  uint32_t* sp;                     // Saved stack pointer.
+  uint32_t* stack_base;             // Stack memory base address.
+  size_t stack_size;                // Stack size in bytes.
+  timestamp_t deadline;             // Scheduler ticks or timeout counter.
+  thread_state_t state;             // Current execution state.
+  list_node_t scheduler_node;       // Scheduler queue node.
+  list_t waiters;                   // Threads waiting for termination.
   mutex_t mutex;
   condition_variable_t completion;
   void* wait_param;
-  void* retval;               // Thread return value.
+  void* retval;                     // Thread return value.
 } thread_t;
 
 

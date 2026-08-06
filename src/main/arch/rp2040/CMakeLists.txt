@@ -38,6 +38,7 @@ target_sources(${PROJECT_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/io/uart.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/io/gpio.c"
 
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/hardware_spinlock.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/interrupts.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/thread.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/spinlock.c"
