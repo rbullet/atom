@@ -5,61 +5,54 @@ typedef enum
   FAILURE,
   SUCCESS,
   REQUIRES_EXTRA_CONTEXT_SWITCH
-} thread_state_operation_result_t;
+} thread_state_transition_result_t;
 
-static thread_state_operation_result_t thread_ready_activate(thread_t* thread);
+static thread_state_transition_result_t thread_ready_activate(thread_t* thread);
 
-static thread_state_operation_result_t thread_blocked_leave(thread_t* thread);
-static thread_state_operation_result_t thread_blocked_activate(thread_t* thread);
+static void thread_blocked_leave(thread_t* thread);
+static thread_state_transition_result_t thread_blocked_activate(thread_t* thread);
 
-static thread_state_operation_result_t thread_sleeping_leave(thread_t* thread);
-static thread_state_operation_result_t thread_sleeping_activate(thread_t* thread);
+static void thread_sleeping_leave(thread_t* thread);
+static thread_state_transition_result_t thread_sleeping_activate(thread_t* thread);
 
-static thread_state_operation_result_t thread_terminated_leave(thread_t* thread);
-static thread_state_operation_result_t thread_terminated_activate(thread_t* thread);
+static void thread_terminated_leave(thread_t* thread);
+static thread_state_transition_result_t thread_terminated_activate(thread_t* thread);
 
 typedef struct
 {
-  thread_state_t state;
-  thread_state_operation_result_t (*leave)(thread_t*);
-  thread_state_operation_result_t (*activate)(thread_t*);
+  void (*leave)(thread_t*);
+  thread_state_transition_result_t (*activate)(thread_t*);
 } thread_state_operation_t;
 
 static thread_state_operation_t const thread_states[THREAD_STATE_COUNT] =
 {
   [THREAD_NEW] =
   {
-    .state = THREAD_NEW,
     .leave = NULL,
     .activate = NULL,
   },
   [THREAD_READY] =
   {
-    .state = THREAD_READY,
     .leave = NULL,
     .activate = thread_ready_activate,
   },
   [THREAD_RUNNING] =
   {
-    .state = THREAD_RUNNING,
     .leave = NULL,
     .activate = NULL,
   },
   [THREAD_BLOCKED] =
   {
-    .state = THREAD_BLOCKED,
     .leave = thread_blocked_leave,
     .activate = thread_blocked_activate,
   },
   [THREAD_SLEEPING] =
   {
-    .state = THREAD_SLEEPING,
     .leave = thread_sleeping_leave,
     .activate = thread_sleeping_activate,
   },
   [THREAD_TERMINATED] =
   {
-    .state = THREAD_TERMINATED,
     .leave = thread_terminated_leave,
     .activate = thread_terminated_activate,
   }
@@ -86,13 +79,13 @@ static thread_state_t const thread_transitions[THREAD_STATE_COUNT][THREAD_EVENT_
   [THREAD_SLEEPING][THREAD_EVENT_WAKEUP] = THREAD_READY,
 };
 
-bool scheduler_thread_process_event(thread_t* thread, thread_event_t event)
+bool scheduler_state_machine_process_event(thread_t* thread, thread_event_t event)
 {
 #ifdef DEBUG
   ATOM_ASSERT(thread!=NULL && thread->state_lock.locked==false, "Thread must be non-null and its state lock must be unlocked");
 #endif
 
-  thread_state_operation_result_t activate_result = SUCCESS;
+  thread_state_transition_result_t activate_result = SUCCESS;
   WITH_INTERRUPTS_DISABLED
   {
     WITH_SPINLOCK(&thread->state_lock)
@@ -114,14 +107,14 @@ bool scheduler_thread_process_event(thread_t* thread, thread_event_t event)
       }
     }
   }
-  if (activate_result == REQUIRES_EXTRA_CONTEXT_SWITCH && scheduler_thread_current()==thread)
+  if (activate_result == REQUIRES_EXTRA_CONTEXT_SWITCH && scheduler_thread_current() == thread)
   {
     scheduler_yield();
   }
   return true;
 }
 
-static thread_state_operation_result_t thread_ready_activate(thread_t* thread)
+static thread_state_transition_result_t thread_ready_activate(thread_t* thread)
 {
   thread_t* const current = execution_context[CPUID].current_thread;
 
@@ -146,10 +139,10 @@ static thread_state_operation_result_t thread_ready_activate(thread_t* thread)
 static void thread_sleeping_wakeup(void* arg)
 {
   thread_t* thread = arg;
-  scheduler_thread_process_event(thread, THREAD_EVENT_WAKEUP);
+  scheduler_state_machine_process_event(thread, THREAD_EVENT_WAKEUP);
 }
 
-static thread_state_operation_result_t thread_sleeping_activate(thread_t* thread)
+static thread_state_transition_result_t thread_sleeping_activate(thread_t* thread)
 {
 #ifdef DEBUG
   ATOM_ASSERT(thread->context.type == THREAD_CONTEXT_SLEEP, "The current thread context must be a THREAD_CONTEXT_SLEEP");
@@ -161,14 +154,13 @@ static thread_state_operation_result_t thread_sleeping_activate(thread_t* thread
   return REQUIRES_EXTRA_CONTEXT_SWITCH;
 }
 
-static thread_state_operation_result_t thread_sleeping_leave(thread_t* thread)
+static void thread_sleeping_leave(thread_t* thread)
 {
 #ifdef DEBUG
   ATOM_ASSERT(thread->context.type == THREAD_CONTEXT_SLEEP, "The current thread context must be a THREAD_CONTEXT_SLEEP");
 #endif
 
   scheduler_deferred_task_cancel(&thread->context.sleep.wakeup_task);
-  return SUCCESS;
 }
 
 static void thread_blocked_wakeup(void* arg)
@@ -185,11 +177,11 @@ static void thread_blocked_wakeup(void* arg)
   }
   if (wakeup)
   {
-    scheduler_thread_process_event(thread, THREAD_EVENT_WAKEUP);
+    scheduler_state_machine_process_event(thread, THREAD_EVENT_WAKEUP);
   }
 }
 
-static thread_state_operation_result_t thread_blocked_activate(thread_t* thread)
+static thread_state_transition_result_t thread_blocked_activate(thread_t* thread)
 {
 #ifdef DEBUG
   ATOM_ASSERT(
@@ -227,13 +219,13 @@ static thread_state_operation_result_t thread_blocked_activate(thread_t* thread)
 
   default:
 #ifdef DEBUG
-        ATOM_ASSERT(false, "Invalid thread context type");
+    ATOM_ASSERT(false, "Invalid thread context type");
 #endif
   }
   return REQUIRES_EXTRA_CONTEXT_SWITCH;
 }
 
-static thread_state_operation_result_t thread_blocked_leave(thread_t* thread)
+static void thread_blocked_leave(thread_t* thread)
 {
 #ifdef DEBUG
   ATOM_ASSERT(
@@ -282,10 +274,9 @@ static thread_state_operation_result_t thread_blocked_leave(thread_t* thread)
     ATOM_ASSERT(false, "Invalid thread context type");
 #endif
   }
-  return SUCCESS;
 }
 
-static thread_state_operation_result_t thread_terminated_activate(thread_t* thread)
+static thread_state_transition_result_t thread_terminated_activate(thread_t* thread)
 {
   list_t waiters = LIST_INITIALIZER;
 
@@ -300,17 +291,16 @@ static thread_state_operation_result_t thread_terminated_activate(thread_t* thre
   while (!list_is_empty(&waiters))
   {
     thread_t* waiter = CONTAINER_OF(list_pop(&waiters), thread_t, scheduler_node);
-    scheduler_thread_process_event(waiter, THREAD_EVENT_WAKEUP);
+    scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
   }
   return REQUIRES_EXTRA_CONTEXT_SWITCH;
 }
 
-static thread_state_operation_result_t thread_terminated_leave(thread_t* thread)
+static void thread_terminated_leave(thread_t* thread)
 {
 #ifdef DEBUG
   ATOM_ASSERT(false, "Should not leave TERMINATED state");
 #endif
 
   (void)thread;
-  return FAILURE;
 }

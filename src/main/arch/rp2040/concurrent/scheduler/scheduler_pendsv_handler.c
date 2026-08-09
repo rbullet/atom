@@ -1,58 +1,5 @@
 #include "internal.h"
 
-static duration_t const scheduler_task_quantum = DURATION_INITIALIZER(10, MILLISECONDS);
-
-__attribute__((used, unused)) static void scheduler_save_current_sp(uint32_t* sp)
-{
-  execution_context[CPUID].current_thread->sp = sp;
-}
-
-static inline thread_t* scheduler_pick_next_thread_on_core(uint32_t const cpuid)
-{
-  thread_t* next = NULL;
-  WITH_SPINLOCK(&execution_context[cpuid].spinlock)
-  {
-    if (!list_is_empty(&execution_context[cpuid].ready_queue))
-    {
-      next = CONTAINER_OF(list_pop(&execution_context[cpuid].ready_queue), thread_t, scheduler_node);
-    }
-  }
-  return next;
-}
-
-static inline thread_t* scheduler_pick_thread_on_current_core(void)
-{
-  return scheduler_pick_next_thread_on_core(CPUID);
-}
-
-static inline thread_t* scheduler_steal_thread_on_other_core(void)
-{
-  return scheduler_pick_next_thread_on_core((CPUID + 1) % CORE_COUNT);
-}
-
-__attribute__((used, unused)) static thread_t* scheduler_pick_next_thread(void)
-{
-  thread_t* next = scheduler_pick_thread_on_current_core();
-  if (next == NULL)
-  {
-    next = scheduler_steal_thread_on_other_core();
-  }
-  return next != NULL ? next : execution_context[CPUID].idle_thread;
-}
-
-__attribute__((used, unused)) static uintptr_t scheduler_switch_to(thread_t* next)
-{
-  thread_t* previous = execution_context[CPUID].current_thread;
-
-  execution_context[CPUID].current_thread = next;
-  next->deadline = scheduler_timestamp_add(scheduler_timestamp_now(), scheduler_task_quantum);
-
-  scheduler_thread_process_event(previous, THREAD_EVENT_YIELD);
-  scheduler_thread_process_event(next, THREAD_EVENT_RUN);
-
-  return (uintptr_t)&next->sp;
-}
-
 static bool scheduler_in_pendsv(void)
 {
   uint32_t ipsr;
@@ -78,8 +25,6 @@ void scheduler_yield(void)
   }
 }
 
-// --- PendSV Handler ---
-// Saves the current thread context and restores the next scheduled thread.
 __attribute__((naked)) void scheduler_pendsv_handler(void)
 {
   __asm volatile(
@@ -134,3 +79,4 @@ __attribute__((naked)) void scheduler_pendsv_handler(void)
     "bx      lr                         \n"
   );
 }
+

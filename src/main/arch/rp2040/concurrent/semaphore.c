@@ -19,7 +19,7 @@ void semaphore_acquire(semaphore_t* semaphore)
 
     thread_wait_on_queue_context_init(&thread->context.wait_on_queue, &semaphore->waiters, &semaphore->spinlock);
 
-    scheduler_thread_process_event(thread, THREAD_EVENT_BLOCK);
+    scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }
 
@@ -61,7 +61,7 @@ void semaphore_release(semaphore_t* semaphore)
 
     if (waiter != NULL)
     {
-      scheduler_thread_process_event(waiter, THREAD_EVENT_WAKEUP);
+      scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
 }

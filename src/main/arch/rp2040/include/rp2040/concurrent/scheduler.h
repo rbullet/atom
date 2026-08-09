@@ -42,7 +42,7 @@ duration_t scheduler_timestamp_duration_since(timestamp_t timestamp);
 
 thread_t* scheduler_thread_current(void);
 
-bool scheduler_thread_process_event(thread_t *thread, thread_event_t event);
+bool scheduler_state_machine_process_event(thread_t *thread, thread_event_t event);
 
 void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t stack_size, thread_func_t start_routine, void* arg);
 

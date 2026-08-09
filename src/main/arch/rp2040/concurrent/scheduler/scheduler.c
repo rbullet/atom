@@ -2,6 +2,7 @@
 
 static thread_t bootstrap_thread;
 static thread_t idle_thread[CORE_COUNT];
+static thread_t deferred_task_thread;
 
 static uint32_t idle_thread_stack[CORE_COUNT][IDLE_THREAD_STACK_SIZE];
 static uint32_t deferred_task_thread_stack[DEFERRED_TASK_THREAD_STACK_SIZE];
@@ -87,7 +88,7 @@ void scheduler_thread_terminate_current(void* retval)
       thread_terminated_context_init(&thread->context.terminated, retval);
     }
   }
-  scheduler_thread_process_event(thread, THREAD_EVENT_TERMINATE);
+  scheduler_state_machine_process_event(thread, THREAD_EVENT_TERMINATE);
 }
 
 __attribute__((noreturn)) static void scheduler_enter_idle(void)
@@ -123,11 +124,12 @@ void scheduler_init(void)
   {
     scheduler_thread_init_bootstrap(&bootstrap_thread, (uint32_t*)&_sstack0, ((uintptr_t)&_estack0 - (uintptr_t)&_sstack0));
 
-    scheduler_thread_init(&deferred_task_thread, deferred_task_thread_stack, DEFERRED_TASK_THREAD_STACK_SIZE, scheduler_deferred_task_callback, NULL);
-    scheduler_thread_process_event(&deferred_task_thread, THREAD_EVENT_START);
+    scheduler_thread_init(&deferred_task_thread, deferred_task_thread_stack, DEFERRED_TASK_THREAD_STACK_SIZE, scheduler_deferred_task_worker, NULL);
+    deferred_task_context.thread = &deferred_task_thread;
+    scheduler_state_machine_process_event(&deferred_task_thread, THREAD_EVENT_START);
 
     scheduler_thread_init(&idle_thread[CPUID], idle_thread_stack[CPUID], IDLE_THREAD_STACK_SIZE, idle_thread_manager, NULL);
-    scheduler_thread_process_event(&idle_thread[CPUID], THREAD_EVENT_START);
+    scheduler_state_machine_process_event(&idle_thread[CPUID], THREAD_EVENT_START);
   }
   else
   {
@@ -167,4 +169,58 @@ void scheduler_start_secondary(void)
   }
 
   core1_started = true;
+}
+
+
+static duration_t const scheduler_task_quantum = DURATION_INITIALIZER(10, MILLISECONDS);
+
+static inline thread_t* scheduler_pick_next_thread_on_core(uint32_t const cpuid)
+{
+  thread_t* next = NULL;
+  WITH_SPINLOCK(&execution_context[cpuid].spinlock)
+  {
+    if (!list_is_empty(&execution_context[cpuid].ready_queue))
+    {
+      next = CONTAINER_OF(list_pop(&execution_context[cpuid].ready_queue), thread_t, scheduler_node);
+    }
+  }
+  return next;
+}
+
+static inline thread_t* scheduler_pick_thread_on_current_core(void)
+{
+  return scheduler_pick_next_thread_on_core(CPUID);
+}
+
+static inline thread_t* scheduler_steal_thread_on_other_core(void)
+{
+  return scheduler_pick_next_thread_on_core((CPUID + 1) % CORE_COUNT);
+}
+
+thread_t* scheduler_pick_next_thread(void)
+{
+  thread_t* next = scheduler_pick_thread_on_current_core();
+  if (next == NULL)
+  {
+    next = scheduler_steal_thread_on_other_core();
+  }
+  return next != NULL ? next : execution_context[CPUID].idle_thread;
+}
+
+void scheduler_save_current_sp(uint32_t* sp)
+{
+  execution_context[CPUID].current_thread->sp = sp;
+}
+
+uintptr_t scheduler_switch_to(thread_t* next)
+{
+  thread_t* previous = execution_context[CPUID].current_thread;
+
+  execution_context[CPUID].current_thread = next;
+  next->deadline = scheduler_timestamp_add(scheduler_timestamp_now(), scheduler_task_quantum);
+
+  scheduler_state_machine_process_event(previous, THREAD_EVENT_YIELD);
+  scheduler_state_machine_process_event(next, THREAD_EVENT_RUN);
+
+  return (uintptr_t)&next->sp;
 }

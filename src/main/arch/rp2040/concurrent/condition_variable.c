@@ -12,7 +12,7 @@ void condition_variable_wait(condition_variable_t* const condition_variable, mut
 
     thread_wait_on_queue_context_init(&thread->context.wait_on_queue, &condition_variable->waiters, &condition_variable->spinlock);
 
-    scheduler_thread_process_event(thread, THREAD_EVENT_BLOCK);
+    scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
 
   mutex_lock(mutex);
@@ -34,7 +34,7 @@ void condition_variable_signal(condition_variable_t* const condition_variable)
 
     if (waiter != NULL)
     {
-      scheduler_thread_process_event(waiter, THREAD_EVENT_WAKEUP);
+      scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
 }
@@ -56,7 +56,7 @@ void condition_variable_broadcast(condition_variable_t* condition_variable)
     while (!list_is_empty(&resume_list))
     {
       thread_t* const waiter = CONTAINER_OF(list_pop(&resume_list), thread_t, scheduler_node);
-      scheduler_thread_process_event(waiter, THREAD_EVENT_WAKEUP);
+      scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
 }

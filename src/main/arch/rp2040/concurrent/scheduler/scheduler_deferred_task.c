@@ -2,16 +2,14 @@
 
 static bool deferred_task_expiration_comparator(list_node_t const* left, list_node_t const* right);
 
-thread_t deferred_task_thread;
-
 deferred_task_context_t deferred_task_context = {
   .spinlock = SPINLOCK_INITIALIZER,
   .tasks_queue = SORTED_LIST_INITIALIZER(deferred_task_expiration_comparator),
   .event_flags = EVENT_FLAGS_INITIALIZER,
-  .thread = &deferred_task_thread
+  .thread = NULL
 };
 
-__attribute__((noreturn)) void* scheduler_deferred_task_callback(void* const arg)
+__attribute__((noreturn)) void* scheduler_deferred_task_worker(void* const arg)
 {
   (void)arg;
   for (;;)

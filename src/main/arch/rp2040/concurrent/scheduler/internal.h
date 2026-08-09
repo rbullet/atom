@@ -63,11 +63,9 @@ typedef struct
   thread_t* thread;
 } deferred_task_context_t;
 
-extern thread_t deferred_task_thread;
-
 extern deferred_task_context_t deferred_task_context;
 
-void* scheduler_deferred_task_callback(void* arg);
+void* scheduler_deferred_task_worker(void* arg);
 
 typedef struct
 {
@@ -85,3 +83,9 @@ void scheduler_yield(void);
 void scheduler_sys_tick_handler(void);
 
 void scheduler_pendsv_handler(void);
+
+thread_t* scheduler_pick_next_thread(void);
+
+void scheduler_save_current_sp(uint32_t* sp);
+
+uintptr_t scheduler_switch_to(thread_t* next);
