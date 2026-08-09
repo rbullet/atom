@@ -25,7 +25,7 @@ static inline thread_t* scheduler_pick_thread_on_current_core(void)
   return scheduler_pick_next_thread_on_core(CPUID);
 }
 
-static inline thread_t* scheduler_steal_thread_on_over_core(void)
+static inline thread_t* scheduler_steal_thread_on_other_core(void)
 {
   return scheduler_pick_next_thread_on_core((CPUID + 1) % CORE_COUNT);
 }
@@ -35,7 +35,7 @@ __attribute__((used, unused)) static thread_t* scheduler_pick_next_thread(void)
   thread_t* next = scheduler_pick_thread_on_current_core();
   if (next == NULL)
   {
-    next = scheduler_steal_thread_on_over_core();
+    next = scheduler_steal_thread_on_other_core();
   }
   return next != NULL ? next : execution_context[CPUID].idle_thread;
 }
