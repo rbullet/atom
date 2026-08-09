@@ -52,6 +52,7 @@ operating system can be explored.
 ## Highlights
 
 - True dual-core SMP scheduler
+- Secondary processor started explicitly on demand
 - No kernel dynamic allocation
 - `main()` as the first scheduled thread
 - Configurable CPU frequency
@@ -66,6 +67,19 @@ operating system can be explored.
 - 1 ms scheduling tick
 - Explicit cooperative yielding (`thread_yield()`)
 - Blocking synchronization primitives
+- Secondary scheduler started explicitly with
+  `scheduler_start_secondary()`
+
+By default, ATOM starts scheduling on the primary processor only.
+Applications that want dual-core scheduling must explicitly start the
+secondary processor:
+
+``` c
+scheduler_start_secondary();
+```
+
+This makes single-core operation the default while allowing applications
+to opt into SMP execution when required.
 
 ## Concurrency
 
@@ -159,30 +173,37 @@ int main(void)
 }
 
 ```
-> [!NOTE]
-> `main()` is the application's initial thread. The scheduler is already running before
-> `main()` is entered, so there is no `scheduler_start()` function. Threads created with
-> `thread_start()` are scheduled automatically alongside the main thread.
+> [!NOTE] `main()` is the application's initial thread. The scheduler
+> is already running before `main()` is entered, so there is no
+> `scheduler_start()` function.
+>
+> ATOM starts on the primary processor by default. If the application
+> wants to use both RP2040 processors, it must explicitly call
+> `scheduler_start_secondary()`.
+>
+> Threads created with `thread_start()` are scheduled automatically
+> alongside the main thread.
 
-This snippet mirrors `examples/07_thread`. The `examples/` directory contains a
-progression of self-contained, standalone sample applications, each
-demonstrating one feature in isolation:
+This snippet mirrors `examples/07_thread`. The `examples/` directory
+contains a progression of self-contained, standalone sample
+applications, each demonstrating one feature in isolation:
 
-| Example | Demonstrates |
-|---|---|
-| `00_developer_playground` | Scratch template |
-| `01_hello_world` | C runtime and UART output |
-| `02_blink` | GPIO and sleeping threads |
-| `03_stdin_stdout` | Console input/output |
-| `04_assert` | Assertions |
-| `05_logging` | Logging framework |
-| `06_timer` | Periodic deferred tasks |
-| `07_thread` | Multiple threads |
-| `08_thread_result` | Thread join and return values |
-| `09_mutex` | Mutex synchronization |
-| `10_semaphore` | Producer/consumer synchronization |
-| `11_condition_variable` | Wait/broadcast synchronization |
-| `12_event_flags` | Persistent event state synchronization |
+| Example | Demonstrates                                      |
+|---|---------------------------------------------------|
+| `00_developer_playground` | Scratch template                                  |
+| `01_hello_world` | C runtime and UART output                         |
+| `02_blink` | GPIO and sleeping threads                         |
+| `03_stdin_stdout` | Console input/output                              |
+| `04_assert` | Assertions                                        |
+| `05_logging` | Logging framework                                 |
+| `06_timer` | Periodic deferred tasks                           |
+| `07_thread` | Multiple threads                                  |
+| `08_thread_result` | Thread join and return values                     |
+| `09_mutex` | Mutex synchronization                             |
+| `10_semaphore` | Producer/consumer synchronization                 |
+| `11_condition_variable` | Wait/broadcast synchronization                    |
+| `12_event_flags` | Persistent event state synchronization            |
+| `13_work_stealing` | Dual-core scheduling and cross-core work stealing |
 
 ---
 
@@ -350,19 +371,19 @@ thread, which keeps both cores fed without a single shared/contended queue.
 
 ```
         Core 0                              Core 1
-   ┌───────────────┐                   ┌───────────────┐
-   │  Ready Queue   │◄─── work steal ──►│  Ready Queue   │
-   │ (scheduler_    │                   │ (scheduler_    │
-   │  spinlock[0])  │                   │  spinlock[1])  │
-   └───────┬────────┘                   └───────┬────────┘
-           │                                     │
-           ▼                                     ▼
-      +---------+                           +---------+
-      | Core 0  |                           | Core 1  |
-      +---------+                           +---------+
-      | SysTick |                           | SysTick |
-      | PendSV  |                           | PendSV  |
-      +---------+                           +---------+
+   ┌──────────────────────────┐                   ┌──────────────────────────┐
+   │  Ready Queue             │◄─── work steal ──►│  Ready Queue             │
+   │ (execution_              │                   │ (execution_              │
+   │  context[0].splinlock)   │                   │  context[1].splinlock)   │
+   └───────────┬──────────────┘                   └─────────────┬────────────┘
+               │                                                │
+               ▼                                                ▼
+           +---------+                                     +---------+
+           | Core 0  |                                     | Core 1  |
+           +---------+                                     +---------+
+           | SysTick |                                     | SysTick |
+           | PendSV  |                                     | PendSV  |
+           +---------+                                     +---------+
 ```
 
 Features:
@@ -372,6 +393,7 @@ Features:
   other core's queue instead of sitting idle while work is available
 - Independent context switching per core
 - Core 0 maintains the global scheduler tick / time base
+- Secondary-core startup is explicit and application-controlled
 
 ---
 
@@ -402,7 +424,8 @@ atom/
 │   ├── 09_mutex/
 │   ├── 10_semaphore/
 │   ├── 11_condition_variable/
-│   └── 12_event_flags/
+│   ├── 12_event_flags/
+│   └── 13_work_stealing/
 │
 ├── build/
 │   └── libatom.a
@@ -435,30 +458,6 @@ project.
 
 Non-blocking variants are available for contended resources
 (`mutex_try_lock()`, `semaphore_try_acquire()`).
-
-## Hardware Resource Ownership
-
-ATOM manages RP2040 hardware spinlocks through a centralized ownership
-allocator.
-
-Applications do not directly access hardware spinlock registers. Instead,
-they request spinlocks through the public API, allowing ATOM to track resource
-ownership, prevent conflicts, and reserve synchronization resources required
-by the kernel and scheduler.
-
-Applications can request:
-
-- **Exclusive spinlocks** for resources requiring dedicated ownership.
-- **Pooled spinlocks** for dynamically created synchronization objects.
-
-Pooled spinlocks are allocated from a pool of available hardware spinlocks.
-This reduces contention by allowing independent synchronization objects to use
-different hardware spinlocks instead of competing for a single shared lock.
-
-Kernel-reserved spinlocks remain private to ATOM subsystems.
-
-This approach provides predictable hardware resource management while keeping
-the SMP implementation isolated from application code.
 
 ---
 
