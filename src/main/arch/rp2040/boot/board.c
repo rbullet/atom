@@ -5,7 +5,7 @@
 #include "rp2040/io/gpio.h"
 #include "rp2040/concurrent/interrupts.h"
 #include "rp2040/concurrent/scheduler.h"
-#include "rp2040/concurrent/spinlock.h"
+#include "rp2040/concurrent/hardware_spinlock.h"
 
 // --- Forward declarations ---
 static void board_init_xosc(void);

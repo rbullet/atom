@@ -1,5 +1,4 @@
 #pragma once
-#include "spinlock.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -10,6 +9,7 @@ extern "C" {
 
 #include "util/helpers.h"
 #include "util/collection/list.h"
+#include "concurrent/spinlock.h"
 
 /**
  * @defgroup concurrent Concurrent

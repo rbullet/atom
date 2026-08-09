@@ -1,4 +1,5 @@
 #pragma once
+#include "deferred_task.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -7,8 +8,7 @@ extern "C" {
 #include <stddef.h>
 #include <stdint.h>
 
-#include "concurrent/mutex.h"
-#include "concurrent/condition_variable.h"
+#include "concurrent/spinlock.h"
 #include "util/collection/list.h"
 #include "util/time/duration.h"
 #include "util/time/timestamp.h"
@@ -41,14 +41,128 @@ extern "C" {
 typedef enum
 {
   THREAD_INVALID = 0, ///< Thread has not been initialized.
+  THREAD_NEW,
   THREAD_READY,       ///< Thread is ready to execute.
   THREAD_RUNNING,     ///< Thread is currently executing.
   THREAD_BLOCKED,     ///< Thread is waiting for an event.
   THREAD_SLEEPING,    ///< Thread is waiting for a timeout.
   THREAD_TERMINATED,  ///< Thread execution has completed.
-
+  /**
+   * @cond INTERNAL
+   */
+  THREAD_STATE_COUNT
+  /**
+   *@endcond
+   */
 } thread_state_t;
 
+typedef enum
+{
+  THREAD_CONTEXT_NONE = 0,
+  THREAD_CONTEXT_SLEEP,
+  THREAD_CONTEXT_WAIT,
+  THREAD_CONTEXT_WAIT_ON_QUEUE,
+  THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT,
+  THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM,
+  THREAD_CONTEXT_TERMINATED,
+} thread_context_type_t;
+
+typedef struct
+{
+  thread_context_type_t type;
+} thread_context_t;
+
+typedef struct
+{
+  thread_context_t base;     // MUST BE THREAD_CONTEXT_SLEEP
+  deferred_task_t wakeup_task;
+} thread_sleep_context_t;
+
+static inline void thread_sleep_context_init(thread_sleep_context_t* context, duration_t const timeout)
+{
+  context->base.type = THREAD_CONTEXT_SLEEP;
+  context->wakeup_task.state = DEFERRED_TASK_IDLE;
+  context->wakeup_task.mutex = MUTEX_INITIALIZER;
+  context->wakeup_task.completion = CONDITION_VARIABLE_INITIALIZER;
+  context->wakeup_task.initial_delay = timeout;
+  context->wakeup_task.period = duration_of(0, MILLISECONDS);
+}
+
+typedef struct
+{
+  thread_context_t base;     // MUST BE THREAD_CONTEXT_WAIT
+} thread_wait_context_t;
+
+static inline void thread_wait_init(thread_wait_context_t* context)
+{
+  context->base.type = THREAD_CONTEXT_WAIT;
+}
+
+typedef struct
+{
+  thread_context_t base;     // MUST BE THREAD_CONTEXT_WAIT_ON_QUEUE
+  list_t* wait_queue;
+  spinlock_t* wait_queue_lock;
+} thread_wait_on_queue_context_t;
+
+static inline void thread_wait_on_queue_context_init(thread_wait_on_queue_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock)
+{
+  context->base.type = THREAD_CONTEXT_WAIT_ON_QUEUE;
+  context->wait_queue = wait_queue;
+  context->wait_queue_lock = wait_queue_lock;
+}
+
+#define THREAD_WAIT_ON_QUEUE_INITIALIZER = ((thread_wait_on_queue_context_t){ .base = { .type = THREAD_CONTEXT_WAIT_ON_QUEUE } })
+
+typedef struct
+{
+  thread_context_t base;     // MUST BE THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT
+  list_t* wait_queue;
+  spinlock_t* wait_queue_lock;
+  deferred_task_t wakeup_task;
+  bool timed_out;
+} thread_wait_on_queue_with_timeout_context_t;
+
+static inline void thread_wait_on_queue_with_timeout_context_init(thread_wait_on_queue_with_timeout_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, duration_t const timeout)
+{
+  context->base.type = THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT;
+  context->wait_queue = wait_queue;
+  context->wait_queue_lock = wait_queue_lock;
+  context->timed_out = false;
+  context->wakeup_task.state = DEFERRED_TASK_IDLE;
+  context->wakeup_task.mutex = MUTEX_INITIALIZER;
+  context->wakeup_task.completion = CONDITION_VARIABLE_INITIALIZER;
+  context->wakeup_task.initial_delay = timeout;
+  context->wakeup_task.period = duration_of(0, MILLISECONDS);
+}
+
+typedef struct
+{
+  thread_context_t base;     // MUST BE THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM
+  list_t* wait_queue;
+  spinlock_t* wait_queue_lock;
+  void* custom_param;
+} thread_wait_on_queue_with_custom_param_context_t;
+
+static inline void thread_wait_on_queue_with_custom_param_init(thread_wait_on_queue_with_custom_param_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, void* custom_param)
+{
+  context->base.type = THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM;
+  context->wait_queue = wait_queue;
+  context->wait_queue_lock = wait_queue_lock;
+  context->custom_param = custom_param;
+}
+
+typedef struct
+{
+  thread_context_t base;    // THREAD_CONTEXT_TERMINATED
+  void* retval;
+} thread_terminated_context_t;
+
+static inline void thread_terminated_context_init(thread_terminated_context_t* context, void* retval)
+{
+  context->base.type = THREAD_CONTEXT_TERMINATED;
+  context->retval = retval;
+}
 
 /**
  * @brief Thread control block.
@@ -68,11 +182,19 @@ typedef struct thread_t
   timestamp_t deadline;             // Scheduler ticks or timeout counter.
   thread_state_t state;             // Current execution state.
   list_node_t scheduler_node;       // Scheduler queue node.
+  spinlock_t state_lock;            // Spinlock for protecting thread state.
   list_t waiters;                   // Threads waiting for termination.
-  mutex_t mutex;
-  condition_variable_t completion;
-  void* wait_param;
-  void* retval;                     // Thread return value.
+  spinlock_t waiters_spinlock;      // Spinlock for protecting waiters list.
+  union
+  {
+    thread_context_type_t type;
+    thread_sleep_context_t sleep;
+    thread_wait_context_t wait;
+    thread_wait_on_queue_context_t wait_on_queue;
+    thread_wait_on_queue_with_timeout_context_t wait_on_queue_with_timeout;
+    thread_wait_on_queue_with_custom_param_context_t wait_on_queue_with_custom_param;
+    thread_terminated_context_t terminated;
+  } context;
 } thread_t;
 
 

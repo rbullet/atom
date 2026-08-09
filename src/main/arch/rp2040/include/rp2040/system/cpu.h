@@ -57,6 +57,8 @@ __attribute__((always_inline)) static inline void wfi(void)
   __asm__ volatile("wfi" ::: "memory");
 }
 
+
+
 // --- Read CONTROL register ---
 static __attribute__((always_inline)) inline uint32_t cpu_control(void)
 {

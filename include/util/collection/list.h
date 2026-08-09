@@ -246,6 +246,33 @@ static inline bool list_is_empty(list_t const* list)
   return list->head == NULL;
 }
 
+/**
+ * @brief Check whether a node belongs to a list.
+ *
+ * The comparison is based on node identity, not on the comparator.
+ *
+ * @param list List to inspect.
+ * @param node Node to search for.
+ *
+ * @retval true  If node is contained in the list.
+ * @retval false Otherwise.
+ */
+static inline bool list_contains(list_t const* list, list_node_t const* node)
+{
+  list_node_t const* current = list->head;
+
+  while (current != NULL)
+  {
+    if (current == node)
+    {
+      return true;
+    }
+    current = current->next;
+  }
+
+  return false;
+}
+
 
 /**
  * @brief Create a list iterator.

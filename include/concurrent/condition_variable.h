@@ -4,8 +4,9 @@
 extern "C" {
 #endif
 
-#include "concurrent/mutex.h"
 #include "util/collection/list.h"
+#include "concurrent/spinlock.h"
+#include "concurrent/mutex.h"
 
 /**
  * @defgroup concurrent Concurrent

@@ -76,7 +76,7 @@ int main(void)
   thread_start(&james_thread);
 
   printf("The concert will start soon...!\r\n");
-  thread_sleep(duration_of(2, SECONDS));
+  thread_sleep(duration_of(5, SECONDS));
 
   printf("The concert has started!\r\n");
   event_flags_set(&concert_events, CONCERT_STARTED);

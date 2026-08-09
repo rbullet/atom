@@ -2,22 +2,26 @@
 
 #include <atom.h>
 #include "rp2040/concurrent/scheduler.h"
+#include "scheduler/internal.h"
 
 void semaphore_acquire(semaphore_t* semaphore)
 {
+  thread_t* const thread = thread_current();
+
   WITH_INTERRUPTS_DISABLED
   {
-    for (;;)
+    spinlock_lock(&semaphore->spinlock);
+
+    if (semaphore->permits > 0)
     {
-      spinlock_lock(&semaphore->spinlock);
-      if (semaphore->permits > 0)
-      {
-        semaphore->permits--;
-        spinlock_unlock(&semaphore->spinlock);
-        return;
-      }
-      scheduler_thread_block_current_on(&semaphore->waiters, &semaphore->spinlock);
+      semaphore->permits--;
+      spinlock_unlock(&semaphore->spinlock);
+      return;
     }
+
+    thread_wait_on_queue_context_init(&thread->context.wait_on_queue, &semaphore->waiters, &semaphore->spinlock);
+
+    thread_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }
 
@@ -34,6 +38,7 @@ bool semaphore_try_acquire(semaphore_t* semaphore)
       semaphore->permits--;
     }
   }
+
   return true;
 }
 
@@ -41,14 +46,24 @@ void semaphore_release(semaphore_t* semaphore)
 {
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(&semaphore->spinlock)
+    thread_t* waiter = NULL;
+
+    spinlock_lock(&semaphore->spinlock);
+
+    if (!list_is_empty(&semaphore->waiters))
+    {
+      waiter = CONTAINER_OF(semaphore->waiters.head, thread_t, scheduler_node);
+    }
+    else
     {
       semaphore->permits++;
-      if (!list_is_empty(&semaphore->waiters))
-      {
-        thread_t* const waiter = CONTAINER_OF(list_pop(&semaphore->waiters), thread_t, scheduler_node);
-        scheduler_thread_resume(waiter);
-      }
+    }
+
+    spinlock_unlock(&semaphore->spinlock);
+
+    if (waiter != NULL)
+    {
+      thread_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
 }

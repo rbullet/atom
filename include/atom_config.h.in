@@ -1,5 +1,7 @@
 #pragma once
 
+#include "util/log.h"
+
 #define CPU_FREQUENCY_HZ @CPU_FREQUENCY@
 
 #define DEFAULT_UART_BAUD_RATE @DEFAULT_UART_BAUD_RATE@

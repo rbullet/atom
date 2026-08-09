@@ -52,7 +52,7 @@ typedef struct
 /**
  * @brief Static spinlock initializer.
  */
-#define SPINLOCK_INITIALIZER { .locked = SPINLOCK_UNLOCKED }
+#define SPINLOCK_INITIALIZER ((spinlock_t){ .locked = SPINLOCK_UNLOCKED })
 
 /**
  * @brief Acquire a spinlock.

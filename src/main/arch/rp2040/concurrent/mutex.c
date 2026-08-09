@@ -2,32 +2,29 @@
 
 #include <atom.h>
 #include "rp2040/concurrent/scheduler.h"
+#include "scheduler/internal.h"
 
 void mutex_lock(mutex_t* mutex)
 {
   thread_t* const thread = thread_current();
   WITH_INTERRUPTS_DISABLED
   {
-    for (;;)
+    spinlock_lock(&mutex->spinlock);
+    if (mutex->owner == thread)
     {
-      spinlock_lock(&mutex->spinlock);
-
-      if (mutex->owner == thread)
-      {
-        mutex->count++;
-        spinlock_unlock(&mutex->spinlock);
-        return;
-      }
-
-      if (mutex->owner == NULL)
-      {
-        mutex->owner = thread;
-        mutex->count = 1;
-        spinlock_unlock(&mutex->spinlock);
-        return;
-      }
-      scheduler_thread_block_current_on(&mutex->waiters, &mutex->spinlock);
+      mutex->count++;
+      spinlock_unlock(&mutex->spinlock);
+      return;
     }
+    if (mutex->owner == NULL)
+    {
+      mutex->owner = thread;
+      mutex->count = 1;
+      spinlock_unlock(&mutex->spinlock);
+      return;
+    }
+    thread_wait_on_queue_context_init(&thread->context.wait_on_queue, &mutex->waiters, &mutex->spinlock);
+    thread_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }
 
@@ -57,25 +54,40 @@ bool mutex_try_lock(mutex_t* mutex)
 
 void mutex_unlock(mutex_t* mutex)
 {
-  thread_t* const thread = thread_current();
+  thread_t const* const thread = thread_current();
   WITH_INTERRUPTS_DISABLED
   {
-    WITH_SPINLOCK(&mutex->spinlock)
+    spinlock_lock(&mutex->spinlock);
+
+    if (mutex->owner != thread)
     {
-      if (mutex->owner != thread)
-      {
-        return;
-      }
-      if (--mutex->count != 0)
-      {
-        return;
-      }
+      spinlock_unlock(&mutex->spinlock);
+      return;
+    }
+
+    if (--mutex->count != 0)
+    {
+      spinlock_unlock(&mutex->spinlock);
+      return;
+    }
+
+    thread_t* waiter = NULL;
+    if (!list_is_empty(&mutex->waiters))
+    {
+      waiter = CONTAINER_OF(mutex->waiters.head, thread_t, scheduler_node);
+      mutex->owner = waiter;
+      mutex->count = 1;
+    }
+    else
+    {
       mutex->owner = NULL;
-      if (!list_is_empty(&mutex->waiters))
-      {
-        thread_t* const waiter = CONTAINER_OF(list_pop(&mutex->waiters), thread_t, scheduler_node);
-        scheduler_thread_resume(waiter);
-      }
+    }
+
+    spinlock_unlock(&mutex->spinlock);
+
+    if (waiter != NULL)
+    {
+      thread_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
 }

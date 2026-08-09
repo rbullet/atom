@@ -23,6 +23,7 @@ add_subdirectory(examples/09_mutex)
 add_subdirectory(examples/10_semaphore)
 add_subdirectory(examples/11_condition_variable)
 add_subdirectory(examples/12_event_flags)
+add_subdirectory(examples/13_work_stealing)
 
 # ------------------------------------------------------------------------------
 # Doxygen documentation

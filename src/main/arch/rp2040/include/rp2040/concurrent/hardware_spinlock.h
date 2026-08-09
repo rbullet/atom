@@ -8,7 +8,7 @@ extern "C" {
 #include <stdint.h>
 #include <stdbool.h>
 
-#include "rp2040/atom.h"
+#define RP2040_SPINLOCK_COUNT                  32
 
 typedef volatile uint32_t hardware_spinlock_t;
 
@@ -44,6 +44,8 @@ extern hardware_spinlock_t* const hardware_spinlock28;
 extern hardware_spinlock_t* const hardware_spinlock29;
 extern hardware_spinlock_t* const hardware_spinlock30;
 extern hardware_spinlock_t* const hardware_spinlock31;
+
+void hardware_spinlock_init(void);
 
 void hardware_spinlock_lock(hardware_spinlock_t* hardware_lock);
 

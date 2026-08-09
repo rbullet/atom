@@ -31,6 +31,7 @@ extern "C" {
  * @{
  */
 
+bool in_interrupt(void);
 
 /**
  * @brief Check whether maskable interrupts are enabled.

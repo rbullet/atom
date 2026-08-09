@@ -19,7 +19,7 @@ void deferred_task_start_periodic(deferred_task_t* deferred_task, duration_t con
   deferred_task->period = period;
   deferred_task->callback = callback;
   deferred_task->arg = arg;
-  scheduler_task_schedule(deferred_task);
+  scheduler_deferred_task_start(deferred_task);
 }
 
 bool deferred_task_is_periodic(deferred_task_t const* deferred_task)
@@ -29,5 +29,5 @@ bool deferred_task_is_periodic(deferred_task_t const* deferred_task)
 
 void deferred_task_cancel(deferred_task_t* deferred_task)
 {
-  scheduler_task_cancel(deferred_task);
+  scheduler_deferred_task_cancel(deferred_task);
 }

@@ -1,6 +1,6 @@
 #include <atom.h>
 
-typedef struct user_t
+typedef struct
 {
   char const* name;
   bool has_driving_licence;

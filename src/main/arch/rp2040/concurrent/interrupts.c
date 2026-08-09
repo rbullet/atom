@@ -102,6 +102,13 @@ __attribute__((used, aligned(256))) volatile uint32_t const vector_table[IRQ_VEC
 __attribute__((section(".vector_table_ram"), aligned(256))) uint32_t relocated_vector_table[IRQ_VECTOR_COUNT];
 // @formatter:on
 
+inline bool in_interrupt(void)
+{
+  uint32_t ipsr;
+  __asm volatile ("mrs %0, ipsr" : "=r"(ipsr));
+  return ipsr != 0;
+}
+
 void interrupts_init(void)
 {
   memcpy(&relocated_vector_table, (void const*)&vector_table, sizeof(vector_table));

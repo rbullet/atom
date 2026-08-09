@@ -65,12 +65,12 @@ __attribute__((used)) ssize_t _read(__attribute__((unused)) int const file, uint
       return i;
     }
 
-    if (ptr[i] == '\r' || ptr[i] == '\n')
+    if (ptr[i] == '\n')
     {
       return i + 1;
     }
   }
-  return (ssize_t)len;
+  return count;
 }
 
 __attribute__((used)) ssize_t _write(__attribute__((unused)) int const file, uint8_t const* ptr, size_t const len)

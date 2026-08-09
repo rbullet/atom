@@ -121,6 +121,21 @@ static inline bool sorted_list_is_empty(sorted_list_t const* list)
   return list_is_empty((list_t*)list);
 }
 
+/**
+ * @brief Check whether a node belongs to a sorted list.
+ *
+ * The comparison is based on node identity, not on the comparator.
+ *
+ * @param list Sorted list to inspect.
+ * @param node Node to search for.
+ *
+ * @retval true  If node is contained in the list.
+ * @retval false Otherwise.
+ */
+static inline bool sorted_list_contains(sorted_list_t const* list, list_node_t const* node)
+{
+  return list_contains((list_t*)list, node);
+}
 
 /**
  * @brief Insert a node while maintaining sorted order.
