@@ -80,20 +80,22 @@ __attribute__((noreturn)) void* scheduler_deferred_task_callback(void* const arg
 
 void scheduler_deferred_task_start(deferred_task_t* const deferred_task)
 {
-  WITH_INTERRUPTS_DISABLED
+  WITH_MUTEX(&deferred_task->mutex)
   {
-    WITH_MUTEX(&deferred_task->mutex)
+    if (deferred_task->state != DEFERRED_TASK_IDLE)
     {
-      if (deferred_task->state != DEFERRED_TASK_IDLE)
-      {
-        return;
-      }
-      deferred_task->scheduler_node = LIST_NODE_INITIALIZER;
-      deferred_task->state = DEFERRED_TASK_SCHEDULED;
-      deferred_task->deadline = scheduler_timestamp_add(scheduler_timestamp_now(), deferred_task->initial_delay);
+      return;
+    }
+    deferred_task->scheduler_node = LIST_NODE_INITIALIZER;
+    deferred_task->state = DEFERRED_TASK_SCHEDULED;
+    deferred_task->deadline = scheduler_timestamp_add(scheduler_timestamp_now(), deferred_task->initial_delay);
+    WITH_INTERRUPTS_DISABLED
+    {
       WITH_SPINLOCK(&deferred_task_context.spinlock)
       {
+#ifdef DEBUG
         ATOM_ASSERT(deferred_task->scheduler_node.next == NULL && deferred_task->scheduler_node.previous == NULL, "Deferred task already linked");
+#endif
         sorted_list_add(&deferred_task_context.tasks_queue, &deferred_task->scheduler_node);
       }
     }
@@ -102,14 +104,14 @@ void scheduler_deferred_task_start(deferred_task_t* const deferred_task)
 
 void scheduler_deferred_task_cancel(deferred_task_t* deferred_task)
 {
-  WITH_INTERRUPTS_DISABLED
+  WITH_MUTEX(&deferred_task->mutex)
   {
-    WITH_MUTEX(&deferred_task->mutex)
+    switch (deferred_task->state)
     {
-      switch (deferred_task->state)
+    case DEFERRED_TASK_SCHEDULED:
+      deferred_task->state = DEFERRED_TASK_CANCELLED;
+      WITH_INTERRUPTS_DISABLED
       {
-      case DEFERRED_TASK_SCHEDULED:
-        deferred_task->state = DEFERRED_TASK_CANCELLED;
         WITH_SPINLOCK(&deferred_task_context.spinlock)
         {
           if (sorted_list_contains(&deferred_task_context.tasks_queue, &deferred_task->scheduler_node))
@@ -117,19 +119,19 @@ void scheduler_deferred_task_cancel(deferred_task_t* deferred_task)
             sorted_list_remove(&deferred_task_context.tasks_queue, &deferred_task->scheduler_node);
           }
         }
-        break;
-
-      case DEFERRED_TASK_RUNNING:
-        deferred_task->state = DEFERRED_TASK_CANCELLED;
-        if (execution_context[CPUID].current_thread != deferred_task_context.thread)
-        {
-          condition_variable_wait(&deferred_task->completion, &deferred_task->mutex);
-        }
-        break;
-
-      default:
-        break;
       }
+      break;
+
+    case DEFERRED_TASK_RUNNING:
+      deferred_task->state = DEFERRED_TASK_CANCELLED;
+      if (execution_context[CPUID].current_thread != deferred_task_context.thread)
+      {
+        condition_variable_wait(&deferred_task->completion, &deferred_task->mutex);
+      }
+      break;
+
+    default:
+      break;
     }
   }
 }
