@@ -86,13 +86,6 @@ static thread_state_t const thread_transitions[THREAD_STATE_COUNT][THREAD_EVENT_
   [THREAD_SLEEPING][THREAD_EVENT_WAKEUP] = THREAD_READY,
 };
 
-static inline bool scheduler_in_pendsv(void)
-{
-  uint32_t ipsr;
-  __asm volatile ("mrs %0, ipsr" : "=r"(ipsr));
-  return ipsr == 14;
-}
-
 bool scheduler_thread_process_event(thread_t* thread, thread_event_t event)
 {
 #ifdef DEBUG
@@ -123,17 +116,7 @@ bool scheduler_thread_process_event(thread_t* thread, thread_event_t event)
   }
   if (activate_result == REQUIRES_EXTRA_CONTEXT_SWITCH && scheduler_thread_current()==thread)
   {
-    if (!scheduler_in_pendsv())
-    {
-      scheduler_request_context_switch();
-    }
-    if (!in_interrupt())
-    {
-      WITH_INTERRUPTS_ENABLED
-      {
-        wfi();
-      }
-    }
+    scheduler_yield();
   }
   return true;
 }
@@ -243,9 +226,9 @@ static thread_state_operation_result_t thread_blocked_activate(thread_t* thread)
     break;
 
   default:
-    #ifdef DEBUG
+#ifdef DEBUG
         ATOM_ASSERT(false, "Invalid thread context type");
-    #endif
+#endif
   }
   return REQUIRES_EXTRA_CONTEXT_SWITCH;
 }
@@ -295,7 +278,9 @@ static thread_state_operation_result_t thread_blocked_leave(thread_t* thread)
     }
     break;
   default:
+#ifdef DEBUG
     ATOM_ASSERT(false, "Invalid thread context type");
+#endif
   }
   return SUCCESS;
 }

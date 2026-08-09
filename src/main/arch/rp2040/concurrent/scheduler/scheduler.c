@@ -1,14 +1,14 @@
 #include "internal.h"
 
 static thread_t bootstrap_thread;
-static thread_t idle_thread[CPU_COUNT];
+static thread_t idle_thread[CORE_COUNT];
 
-static uint32_t idle_thread_stack[CPU_COUNT][IDLE_THREAD_STACK_SIZE];
+static uint32_t idle_thread_stack[CORE_COUNT][IDLE_THREAD_STACK_SIZE];
 static uint32_t deferred_task_thread_stack[DEFERRED_TASK_THREAD_STACK_SIZE];
 
 static bool core1_started = false;
 
-execution_context_t execution_context[CPU_COUNT] =
+execution_context_t execution_context[CORE_COUNT] =
 {
   {.spinlock = SPINLOCK_INITIALIZER, .ready_queue = LIST_INITIALIZER, .current_thread = NULL, .idle_thread = &idle_thread[0]},
   {.spinlock = SPINLOCK_INITIALIZER, .ready_queue = LIST_INITIALIZER, .current_thread = NULL, .idle_thread = &idle_thread[1]},

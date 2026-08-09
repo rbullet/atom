@@ -77,9 +77,9 @@ typedef struct
   thread_t* idle_thread;
 } execution_context_t;
 
-extern execution_context_t execution_context[CPU_COUNT];
+extern execution_context_t execution_context[CORE_COUNT];
 
-void scheduler_request_context_switch(void);
+void scheduler_yield(void);
 
 // -- ISRs
 void scheduler_sys_tick_handler(void);

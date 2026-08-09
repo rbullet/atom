@@ -27,7 +27,7 @@ static inline thread_t* scheduler_pick_thread_on_current_core(void)
 
 static inline thread_t* scheduler_steal_thread_on_over_core(void)
 {
-  return scheduler_pick_next_thread_on_core((CPUID + 1) % CPU_COUNT);
+  return scheduler_pick_next_thread_on_core((CPUID + 1) % CORE_COUNT);
 }
 
 __attribute__((used, unused)) static thread_t* scheduler_pick_next_thread(void)
@@ -53,10 +53,29 @@ __attribute__((used, unused)) static uintptr_t scheduler_switch_to(thread_t* nex
   return (uintptr_t)&next->sp;
 }
 
-void scheduler_request_context_switch(void)
+static bool scheduler_in_pendsv(void)
 {
+  uint32_t ipsr;
+  __asm volatile ("mrs %0, ipsr" : "=r"(ipsr));
+  return ipsr == 14;
+}
+
+void scheduler_yield(void)
+{
+  if (scheduler_in_pendsv())
+  {
+    return;
+  }
   __asm volatile("dmb ish" ::: "memory");
   REG_WRITE(ICSR, ICSR_PENDSVSET);
+
+  if (!in_interrupt())
+  {
+    WITH_INTERRUPTS_ENABLED
+    {
+      wfi();
+    }
+  }
 }
 
 // --- PendSV Handler ---
@@ -115,4 +134,3 @@ __attribute__((naked)) void scheduler_pendsv_handler(void)
     "bx      lr                         \n"
   );
 }
-

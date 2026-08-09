@@ -17,7 +17,7 @@ extern uint32_t _eheap;
 // --- Pointer to track current end of heap ---
 static uint8_t* heap_end = NULL;
 
-static uint32_t interrupt_state[CPU_COUNT];
+static uint32_t interrupt_state[CORE_COUNT];
 
 __attribute__((used)) void __malloc_lock(__attribute__((unused)) struct _reent* r)
 {

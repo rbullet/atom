@@ -4,10 +4,6 @@ volatile uint64_t sys_tick = 0;
 
 void scheduler_sys_tick_handler(void)
 {
-  if (CPU_IS_CORE_1)
-  {
-    __asm__ __volatile__("nop");
-  }
   WITH_INTERRUPTS_DISABLED
   {
     if (CPU_IS_CORE_0)
@@ -33,7 +29,7 @@ void scheduler_sys_tick_handler(void)
         || scheduler_timestamp_is_expired(execution_context[CPUID].current_thread->deadline)
       )
       {
-        scheduler_request_context_switch();
+        scheduler_yield();
       }
     }
   }

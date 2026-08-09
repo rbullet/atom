@@ -24,7 +24,7 @@ extern "C" {
 #define SIO_FIFO_RD     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_RD_OFFSET))
 #define SIO_FIFO_WR     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_WR_OFFSET))
 
-#define CPU_COUNT 2
+#define CORE_COUNT 2
 #define CPUID           (*((volatile uint32_t*)(SIO_BASE + SIO_CPUID_OFFSET)))
 #define CPU_IS_CORE_0   (CPUID == 0)   // Check if running on core 0
 #define CPU_IS_CORE_1   (CPUID == 1)   // Check if running on core 1
