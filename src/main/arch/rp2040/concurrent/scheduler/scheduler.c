@@ -18,7 +18,9 @@ static void scheduler_thread_terminate_current(void* retval);
 
 static __attribute__((noreturn)) void* idle_thread_manager(__attribute__((unused)) void* const arg)
 {
-  interrupts_enable();
+#ifdef DEBUG
+  ATOM_ASSERT(interrupts_are_enabled(), "Interrupts must be enabled in idle thread");
+#endif
   for (;;)
   {
     wfi();
@@ -136,7 +138,6 @@ void scheduler_init(void)
   scheduler_init_hardware();
   if (CPU_IS_CORE_1)
   {
-    scheduler_init_hardware();
     scheduler_enter_idle();
   }
 }
