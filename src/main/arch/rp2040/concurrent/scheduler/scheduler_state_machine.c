@@ -167,12 +167,15 @@ static void thread_blocked_wakeup(void* arg)
 {
   thread_t* thread = arg;
   bool wakeup = false;
-  WITH_SPINLOCK(&thread->state_lock)
+  WITH_INTERRUPTS_DISABLED
   {
-    if (thread->state == THREAD_BLOCKED)
+    WITH_SPINLOCK(&thread->state_lock)
     {
-      thread->context.wait_on_queue_with_timeout.timed_out = true;
-      wakeup = true;
+      if (thread->state == THREAD_BLOCKED)
+      {
+        thread->context.wait_on_queue_with_timeout.timed_out = true;
+        wakeup = true;
+      }
     }
   }
   if (wakeup)
