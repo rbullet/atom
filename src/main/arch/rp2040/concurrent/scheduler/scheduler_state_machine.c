@@ -93,7 +93,7 @@ static inline bool scheduler_in_pendsv(void)
   return ipsr == 14;
 }
 
-bool thread_process_event(thread_t* thread, thread_event_t event)
+bool scheduler_thread_process_event(thread_t* thread, thread_event_t event)
 {
 #ifdef DEBUG
   ATOM_ASSERT(thread!=NULL && thread->state_lock.locked==false, "Thread must be non-null and its state lock must be unlocked");
@@ -163,7 +163,7 @@ static thread_state_operation_result_t thread_ready_activate(thread_t* thread)
 static void thread_sleeping_wakeup(void* arg)
 {
   thread_t* thread = arg;
-  thread_process_event(thread, THREAD_EVENT_WAKEUP);
+  scheduler_thread_process_event(thread, THREAD_EVENT_WAKEUP);
 }
 
 static thread_state_operation_result_t thread_sleeping_activate(thread_t* thread)
@@ -202,7 +202,7 @@ static void thread_blocked_wakeup(void* arg)
   }
   if (wakeup)
   {
-    thread_process_event(thread, THREAD_EVENT_WAKEUP);
+    scheduler_thread_process_event(thread, THREAD_EVENT_WAKEUP);
   }
 }
 
@@ -315,7 +315,7 @@ static thread_state_operation_result_t thread_terminated_activate(thread_t* thre
   while (!list_is_empty(&waiters))
   {
     thread_t* waiter = CONTAINER_OF(list_pop(&waiters), thread_t, scheduler_node);
-    thread_process_event(waiter, THREAD_EVENT_WAKEUP);
+    scheduler_thread_process_event(waiter, THREAD_EVENT_WAKEUP);
   }
   return REQUIRES_EXTRA_CONTEXT_SWITCH;
 }

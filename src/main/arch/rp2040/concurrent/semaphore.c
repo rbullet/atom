@@ -1,8 +1,6 @@
 #include <stdlib.h>
 
-#include <atom.h>
-#include "rp2040/concurrent/scheduler.h"
-#include "scheduler/internal.h"
+#include "rp2040/atom.h"
 
 void semaphore_acquire(semaphore_t* semaphore)
 {
@@ -21,7 +19,7 @@ void semaphore_acquire(semaphore_t* semaphore)
 
     thread_wait_on_queue_context_init(&thread->context.wait_on_queue, &semaphore->waiters, &semaphore->spinlock);
 
-    thread_process_event(thread, THREAD_EVENT_BLOCK);
+    scheduler_thread_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }
 
@@ -63,7 +61,7 @@ void semaphore_release(semaphore_t* semaphore)
 
     if (waiter != NULL)
     {
-      thread_process_event(waiter, THREAD_EVENT_WAKEUP);
+      scheduler_thread_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
 }

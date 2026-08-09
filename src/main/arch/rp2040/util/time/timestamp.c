@@ -1,5 +1,4 @@
-#include <atom.h>
-#include "rp2040/concurrent/scheduler.h"
+#include "rp2040/atom.h"
 
 __attribute__((weak)) timestamp_t timestamp_now(void)
 {

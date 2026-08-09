@@ -1,7 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "rp2040/concurrent/interrupts.h"
+#include "rp2040/atom.h"
 
 #define IRQ_VECTOR_COUNT 48
 

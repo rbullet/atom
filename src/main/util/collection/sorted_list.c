@@ -1,4 +1,4 @@
-#include "util/collection/sorted_list.h"
+#include <atom.h>
 
 void sorted_list_add(sorted_list_t* list, list_node_t* node)
 {

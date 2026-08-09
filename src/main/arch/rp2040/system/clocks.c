@@ -1,4 +1,4 @@
-#include "rp2040/system/clocks.h"
+#include "rp2040/atom.h"
 
 clocks_t* const clocks_clk_ref_ctrl = REG(CLOCKS_BASE, CLOCKS_CLK_REF_CTRL_OFFSET);
 clocks_t* const clocks_clk_sys_ctrl = REG(CLOCKS_BASE, CLOCKS_CLK_SYS_CTRL_OFFSET);

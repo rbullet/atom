@@ -1,8 +1,7 @@
 #include <stdio.h>
 #include <time.h>
 
-#include "atom_config.h"
-#include "util/log.h"
+#include <atom.h>
 
 static FILE* log_stream = NULL;
 

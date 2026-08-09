@@ -1,7 +1,6 @@
 #pragma once
 
 #include "rp2040/atom.h"
-#include "rp2040/concurrent/scheduler.h"
 
 // --- Private Peripheral Bus (PPB) ---
 #define PPB_BASE                            0xE0000000
@@ -79,22 +78,6 @@ typedef struct
 } execution_context_t;
 
 extern execution_context_t execution_context[CPU_COUNT];
-
-typedef enum
-{
-  THREAD_EVENT_NONE,
-  THREAD_EVENT_START,
-  THREAD_EVENT_RUN,
-  THREAD_EVENT_YIELD,
-  THREAD_EVENT_BLOCK,
-  THREAD_EVENT_SLEEP,
-  THREAD_EVENT_WAKEUP,
-  THREAD_EVENT_TERMINATE,
-
-  THREAD_EVENT_COUNT
-} thread_event_t;
-
-bool thread_process_event(thread_t *thread, thread_event_t event);
 
 void scheduler_request_context_switch(void);
 

@@ -1,5 +1,4 @@
 #include "rp2040/atom.h"
-#include "scheduler/internal.h"
 
 typedef struct
 {
@@ -56,7 +55,7 @@ void event_flags_set(event_flags_t* event, event_flags_mask_t const flags)
     while (!list_is_empty(&resume_list))
     {
       thread_t* const thread = CONTAINER_OF(list_pop(&resume_list), thread_t, scheduler_node);
-      thread_process_event(thread, THREAD_EVENT_WAKEUP);
+      scheduler_thread_process_event(thread, THREAD_EVENT_WAKEUP);
     }
   }
 }
@@ -87,7 +86,7 @@ void event_flags_wait(event_flags_t* event, event_flags_mask_t const mask, event
 
     event_flags_wait_param_t waiter = EVENT_FLAGS_WAIT_PARAM_INITIALIZER(mask, mode);
     thread_wait_on_queue_with_custom_param_init(&thread->context.wait_on_queue_with_custom_param, &event->waiters, &event->spinlock, &waiter);
-    thread_process_event(thread, THREAD_EVENT_BLOCK);
+    scheduler_thread_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }
 

@@ -47,8 +47,8 @@ __attribute__((used, unused)) static uintptr_t scheduler_switch_to(thread_t* nex
   execution_context[CPUID].current_thread = next;
   next->deadline = scheduler_timestamp_add(scheduler_timestamp_now(), scheduler_task_quantum);
 
-  thread_process_event(previous, THREAD_EVENT_YIELD);
-  thread_process_event(next, THREAD_EVENT_RUN);
+  scheduler_thread_process_event(previous, THREAD_EVENT_YIELD);
+  scheduler_thread_process_event(next, THREAD_EVENT_RUN);
 
   return (uintptr_t)&next->sp;
 }

@@ -87,7 +87,7 @@ void scheduler_thread_terminate_current(void* retval)
       thread_terminated_context_init(&thread->context.terminated, retval);
     }
   }
-  thread_process_event(thread, THREAD_EVENT_TERMINATE);
+  scheduler_thread_process_event(thread, THREAD_EVENT_TERMINATE);
 }
 
 __attribute__((noreturn)) static void scheduler_enter_idle(void)
@@ -124,10 +124,10 @@ void scheduler_init(void)
     scheduler_thread_init_bootstrap(&bootstrap_thread, (uint32_t*)&_sstack0, ((uintptr_t)&_estack0 - (uintptr_t)&_sstack0));
 
     scheduler_thread_init(&deferred_task_thread, deferred_task_thread_stack, DEFERRED_TASK_THREAD_STACK_SIZE, scheduler_deferred_task_callback, NULL);
-    thread_process_event(&deferred_task_thread, THREAD_EVENT_START);
+    scheduler_thread_process_event(&deferred_task_thread, THREAD_EVENT_START);
 
     scheduler_thread_init(&idle_thread[CPUID], idle_thread_stack[CPUID], IDLE_THREAD_STACK_SIZE, idle_thread_manager, NULL);
-    thread_process_event(&idle_thread[CPUID], THREAD_EVENT_START);
+    scheduler_thread_process_event(&idle_thread[CPUID], THREAD_EVENT_START);
   }
   else
   {

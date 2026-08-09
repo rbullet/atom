@@ -1,7 +1,7 @@
-#include "util/time/duration.h"
-
 #include <assert.h>
 #include <stdbool.h>
+
+#include <atom.h>
 
 duration_t duration_convert_to(duration_t const duration, time_unit_t const unit)
 {

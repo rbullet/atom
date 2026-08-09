@@ -1,3 +1,4 @@
+#include "rp2040/atom.h"
 
 void cpu_breakpoint(void)
 {

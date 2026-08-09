@@ -3,8 +3,7 @@
 #include <sys/errno.h>
 #include <stdio.h>
 
-#include <atom.h>
-#include "rp2040/system/cpu.h"
+#include "rp2040/atom.h"
 
 static spinlock_t global_spinlock = SPINLOCK_INITIALIZER;
 

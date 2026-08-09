@@ -1,8 +1,6 @@
 #include <stdlib.h>
 
-#include <atom.h>
-#include "rp2040/concurrent/scheduler.h"
-#include "scheduler/internal.h"
+#include "rp2040/atom.h"
 
 void mutex_lock(mutex_t* mutex)
 {
@@ -24,7 +22,7 @@ void mutex_lock(mutex_t* mutex)
       return;
     }
     thread_wait_on_queue_context_init(&thread->context.wait_on_queue, &mutex->waiters, &mutex->spinlock);
-    thread_process_event(thread, THREAD_EVENT_BLOCK);
+    scheduler_thread_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }
 
@@ -87,7 +85,7 @@ void mutex_unlock(mutex_t* mutex)
 
     if (waiter != NULL)
     {
-      thread_process_event(waiter, THREAD_EVENT_WAKEUP);
+      scheduler_thread_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
 }

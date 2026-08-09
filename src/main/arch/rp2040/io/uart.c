@@ -1,7 +1,6 @@
 #include <stdbool.h>
 
-#include <atom.h>
-#include "rp2040/io/uart.h"
+#include "rp2040/atom.h"
 
 #define UART_UARTDR(uart)  REG((uart) ,UART0_UARTDR_OFFSET)
 

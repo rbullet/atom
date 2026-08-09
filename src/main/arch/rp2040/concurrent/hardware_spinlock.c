@@ -1,8 +1,7 @@
 #include <stdbool.h>
 #include <stddef.h>
 
-#include <atom.h>
-#include "rp2040/concurrent/hardware_spinlock.h"
+#include "rp2040/atom.h"
 
 // --- SIO peripheral registers (from RP2040 SVD) ---
 #define SIO_BASE 0XD0000000

@@ -1,7 +1,6 @@
 #include <stdbool.h>
 
-#include <atom.h>
-#include "rp2040/concurrent/hardware_spinlock.h"
+#include "rp2040/atom.h"
 
 #define SPINLOCK_GLOBAL_LOCK hardware_spinlock31
 

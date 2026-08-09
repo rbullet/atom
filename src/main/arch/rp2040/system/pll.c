@@ -1,5 +1,4 @@
-#include "rp2040/system/pll.h"
-#include "rp2040/system/xosc.h"
+#include "rp2040/atom.h"
 
 pll_t* const pll_sys = ((pll_t* const)PLL_SYS_BASE);
 

@@ -1,5 +1,4 @@
-#include "rp2040/io/gpio.h"
-#include "rp2040/system/resets.h"
+#include "rp2040/atom.h"
 
 #define SIO_GPIO_OUT_SET REG(SIO_BASE, SIO_GPIO_OUT_SET_OFFSET)
 #define SIO_GPIO_OUT_CLR REG(SIO_BASE, SIO_GPIO_OUT_CLR_OFFSET)
