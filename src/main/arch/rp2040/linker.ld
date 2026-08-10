@@ -127,7 +127,7 @@ SECTIONS
 
     /* --- Vector table relocated to RAM --- */
 
-    .vector_table_ram ALIGN(256):
+    .vector_table_ram (NOLOAD):
     {
         . = ALIGN(256);
         KEEP(*(.vector_table_ram))
