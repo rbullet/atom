@@ -5,10 +5,12 @@
 #define UART_UARTDR(uart)  REG((uart) ,UART0_UARTDR_OFFSET)
 
 // --- UART instances ---
+
 uart_t* const uart0 = (uart_t*)UART0_BASE;
 uart_t* const uart1 = (uart_t*)UART1_BASE;
 
-// --- Initialize UART (baud rate, 8N1, FIFO enabled) ---
+// --- UART configuration ---
+
 void uart_init(uart_t* uart, uint32_t const baud_rate)
 {
   baud_rate_params_t const baud_rate_params = uart_get_baud_rate_params(baud_rate);
@@ -19,25 +21,25 @@ void uart_init(uart_t* uart, uint32_t const baud_rate)
   uart_enable_mode(uart, UART_UARTCR_TXE | UART_UARTCR_RXE | UART_UARTCR_UARTEN);
 }
 
-// --- Check if UART is enabled ---
+// --- UART operations ---
+
 bool uart_is_enabled(uart_t const* uart)
 {
   return uart_has_mode(uart, UART_UARTCR_UARTEN);
 }
 
-// --- Disable UART ---
 void uart_disable(uart_t* uart)
 {
   uart_disable_mode(uart, UART_UARTCR_UARTEN);
 }
 
-// --- Enable UART ---
 void uart_enable(uart_t* uart)
 {
   uart_enable_mode(uart, UART_UARTCR_UARTEN);
 }
 
-// --- Read bytes from UART (blocking) ---
+// --- UART I/O ---
+
 size_t uart_read(uart_t* uart, uint8_t* buffer, size_t len)
 {
   for (uint32_t i = 0; i < len; i++)
@@ -51,7 +53,6 @@ size_t uart_read(uart_t* uart, uint8_t* buffer, size_t len)
   return len;
 }
 
-// --- Write bytes to UART (blocking) ---
 size_t uart_write(uart_t* uart, uint8_t const* buffer, size_t len)
 {
   for (size_t i = 0; i < len; i++)
