@@ -1,13 +1,9 @@
 #include <string.h>
 
-#include <atom.h>
 #include "rp2040/atom.h"
-#include "rp2040/io/gpio.h"
-#include "rp2040/concurrent/interrupts.h"
-#include "rp2040/concurrent/scheduler.h"
-#include "rp2040/concurrent/hardware_spinlock.h"
 
 // --- Forward declarations ---
+
 static void board_init_xosc(void);
 static void board_reset_clocks(void);
 static void board_init_subsystems(void);
@@ -19,7 +15,8 @@ static void board_init_uart(void);
 static void board_init_logging(void);
 static void board_init_scheduler();
 
-// --- Perform full board initialization ---
+// --- Board initialization ---
+
 void board_init(void)
 {
   board_init_spinlocks();
@@ -34,12 +31,15 @@ void board_init(void)
   board_init_scheduler();
 }
 
+// --- Interrupts ---
+
 static void board_init_interrupts(void)
 {
   interrupts_init();
 }
 
-// --- Reset system clocks to safe defaults ---
+// --- Clocks ---
+
 static void board_reset_clocks(void)
 {
   clocks_clk_ref_set_src(CLK_REF_SRC_ROSC_CLKSRC_PH);
@@ -48,13 +48,6 @@ static void board_reset_clocks(void)
   clocks_clk_peri_set_auxsrc(CLK_PERI_AUXSRC_CLK_SYS);
 }
 
-// --- Initialize all spinlocks to unlocked state ---
-static void board_init_spinlocks(void)
-{
-  hardware_spinlock_init();
-}
-
-// --- Initialize external crystal oscillator (XOSC) ---
 static void board_init_xosc(void)
 {
   xosc_clear_badwrite_bit();
@@ -68,13 +61,6 @@ static void board_init_xosc(void)
   }
 }
 
-// --- Reset essential subsystems (PLL, IO, UART) ---
-static void board_init_subsystems(void)
-{
-  reset(RESETS_RESET_PLL_SYS | RESETS_RESET_IO_BANK0 | RESETS_RESET_PADS_BANK0 | RESETS_RESET_UART0);
-}
-
-// --- Configure PLL for CPU frequency ---
 static void board_init_pll(void)
 {
   pll_disable_pwr_mode(PLL_SYS, PLL_PWR_PD | PLL_PWR_VCOPD | PLL_PWR_POSTDIVPD);
@@ -91,7 +77,6 @@ static void board_init_pll(void)
   pll_enable_pwr_mode(PLL_SYS, PLL_PWR_POSTDIVPD);
 }
 
-// --- Configure system and peripheral clocks ---
 static void board_init_clocks(void)
 {
   clocks_clk_ref_set_src(CLK_REF_SRC_XOSC_CLKSRC);
@@ -102,7 +87,13 @@ static void board_init_clocks(void)
   clocks_clk_peri_set_enabled(true);
 }
 
-// --- Initialize UART0 for communication ---
+// --- Peripherals ---
+
+static void board_init_subsystems(void)
+{
+  reset(RESETS_RESET_PLL_SYS | RESETS_RESET_IO_BANK0 | RESETS_RESET_PADS_BANK0 | RESETS_RESET_UART0);
+}
+
 static void board_init_uart(void)
 {
   if (uart_is_enabled(uart0))
@@ -114,16 +105,25 @@ static void board_init_uart(void)
   uart_init(uart0, DEFAULT_UART_BAUD_RATE);
 }
 
-// --- Configure logging system output and level ---
+// --- Concurrency ---
+
+static void board_init_spinlocks(void)
+{
+  hardware_spinlock_init();
+}
+
+static void board_init_scheduler(void)
+{
+  scheduler_init();
+  interrupts_enable();
+}
+
+// --- Logging ---
+
 static void board_init_logging(void)
 {
   log_set_output(stdout);
   log_set_min_level(LOG_LEVEL_INFO);
 }
 
-// --- Initialize scheduler and enable interrupts ---
-static void board_init_scheduler(void)
-{
-  scheduler_init();
-  interrupts_enable();
-}
+

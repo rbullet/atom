@@ -3,7 +3,8 @@
 
 #include "rp2040/atom.h"
 
-// --- SIO peripheral registers (from RP2040 SVD) ---
+// --- SIO peripheral registers ---
+
 #define SIO_BASE 0XD0000000
 #define SIO_SPINLOCK0_OFFSET 0X0100
 #define SIO_SPINLOCK1_OFFSET 0X0104
@@ -38,6 +39,8 @@
 #define SIO_SPINLOCK30_OFFSET 0X0178
 #define SIO_SPINLOCK31_OFFSET 0X017C
 
+// --- Hardware spinlocks ---
+
 hardware_spinlock_t* const hardware_spinlock0 = ((hardware_spinlock_t*)(SIO_BASE + SIO_SPINLOCK0_OFFSET));
 hardware_spinlock_t* const hardware_spinlock1 = ((hardware_spinlock_t*)(SIO_BASE + SIO_SPINLOCK1_OFFSET));
 hardware_spinlock_t* const hardware_spinlock2 = ((hardware_spinlock_t*)(SIO_BASE + SIO_SPINLOCK2_OFFSET));
@@ -71,6 +74,8 @@ hardware_spinlock_t* const hardware_spinlock29 = ((hardware_spinlock_t*)(SIO_BAS
 hardware_spinlock_t* const hardware_spinlock30 = ((hardware_spinlock_t*)(SIO_BASE + SIO_SPINLOCK30_OFFSET));
 hardware_spinlock_t* const hardware_spinlock31 = ((hardware_spinlock_t*)(SIO_BASE + SIO_SPINLOCK31_OFFSET));
 
+// --- Hardware spinlock initialization ---
+
 void hardware_spinlock_init(void)
 {
   for (size_t i = 0; i < RP2040_SPINLOCK_COUNT; i++)
@@ -78,6 +83,8 @@ void hardware_spinlock_init(void)
     hardware_spinlock0[i] = 1; // Clear RP2040 hardware spinlock state.
   }
 }
+
+// --- Hardware spinlock operations ---
 
 bool hardware_spinlock_try_lock(hardware_spinlock_t* const hardware_spinlock)
 {
