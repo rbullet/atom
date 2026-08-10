@@ -2,10 +2,6 @@
 #include <stdint.h>
 #include <atom.h>
 
-#include "../../src/main/arch/rp2040/include/rp2040/concurrent/interrupts.h"
-#include "../../src/main/arch/rp2040/include/rp2040/system/cpu.h"
-#include "concurrent/scheduler.h"
-
 #define THREAD_STACK_SIZE 1024
 
 static uint32_t annie_thread_stack[THREAD_STACK_SIZE];
@@ -21,7 +17,7 @@ static void* annie_thread_routine(void* arg)
   {
     WITH_MUTEX(&mutex)
     {
-      printf("Annie: Hello from CORE %lu!\r\n", CPUID);
+      printf("Annie: Hello from CORE %lu!\r\n", cpu_get_id());
     }
   }
   return NULL;
@@ -33,7 +29,7 @@ static void* brian_thread_routine(void* arg)
   {
     WITH_MUTEX(&mutex)
     {
-      printf("Brian: Hello from CORE %lu!\r\n", CPUID);
+      printf("Brian: Hello from CORE %lu!\r\n", cpu_get_id());
     }
   }
   return NULL;
@@ -45,7 +41,7 @@ static void* james_thread_routine(void* arg)
   {
     WITH_MUTEX(&mutex)
     {
-      printf("James: Hello from CORE %lu!\r\n", CPUID);
+      printf("James: Hello from CORE %lu!\r\n", cpu_get_id());
     }
   }
   return NULL;
@@ -57,7 +53,7 @@ static void* sarah_thread_routine(void* arg)
   {
     WITH_MUTEX(&mutex)
     {
-      printf("Sarah: Hello from CORE %lu!\r\n", CPUID);
+      printf("Sarah: Hello from CORE %lu!\r\n", cpu_get_id());
     }
   }
   return NULL;

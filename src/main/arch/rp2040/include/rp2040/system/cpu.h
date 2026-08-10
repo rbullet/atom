@@ -1,7 +1,6 @@
 #pragma once
 #ifdef __cplusplus
 extern "C" {
-
 #endif
 
 #include <stdint.h>
@@ -51,17 +50,17 @@ typedef enum
 
 // --- Event and wait instructions ---
 
-__attribute__((always_inline)) static inline void sev(void)
+static __attribute__((always_inline)) inline void sev(void)
 {
   __asm volatile("sev" ::: "memory");
 }
 
-__attribute__((always_inline)) static inline void wfe(void)
+static __attribute__((always_inline)) inline void wfe(void)
 {
   __asm volatile("wfe" ::: "memory");
 }
 
-__attribute__((always_inline)) static inline void wfi(void)
+static __attribute__((always_inline)) inline void wfi(void)
 {
   __asm volatile("wfi" ::: "memory");
 }
@@ -107,7 +106,7 @@ static inline size_t cpu_fifo_write(uint32_t const* buffer, size_t const len)
       wfe();
     }
 
-    *SIO_FIFO_WR = buffer[i];
+    REG_WRITE(SIO_FIFO_WR, buffer[i]);
     sev();
   }
 
@@ -122,7 +121,7 @@ static inline size_t cpu_fifo_read(uint32_t* buffer, size_t const len)
     {
       wfe();
     }
-    buffer[i] = *SIO_FIFO_RD;
+    buffer[i] = REG_READ(SIO_FIFO_RD);
     sev();
   }
   return len;
@@ -137,7 +136,7 @@ static inline bool cpu_fifo_try_read(uint32_t* value)
     return false;
   }
 
-  *value = *SIO_FIFO_RD;
+  *value = REG_READ(SIO_FIFO_RD);
   return true;
 }
 
@@ -148,7 +147,7 @@ static inline bool cpu_fifo_try_write(uint32_t const value)
     return false;
   }
 
-  *SIO_FIFO_WR = value;
+  REG_WRITE(SIO_FIFO_WR, value);
   sev();
   return true;
 }
