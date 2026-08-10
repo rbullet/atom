@@ -82,7 +82,7 @@ __attribute__((used, weak)) ssize_t atom_console_read(void *buf, size_t const si
   return (ssize_t)uart_read(uart0, buf, size);
 }
 
-__attribute__((used, weak)) ssize_t atom_console_write(void const *buf, size_t size)
+__attribute__((used, weak)) ssize_t atom_console_write(void const *buf, size_t const size)
 {
   return (ssize_t)uart_write(uart0, buf, size);
 }

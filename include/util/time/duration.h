@@ -51,7 +51,7 @@ typedef struct
  *
  * @return A duration initialized with the specified value and unit.
  */
-static inline duration_t duration_of(float value, time_unit_t unit)
+static inline duration_t duration_of(float const value, time_unit_t const unit)
 {
   return DURATION_INITIALIZER(value, unit);
 }

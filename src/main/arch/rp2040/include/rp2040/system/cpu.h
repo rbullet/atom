@@ -154,7 +154,7 @@ static inline void cpu_fifo_flush(void)
   sev();
 }
 
-static inline bool cpu_fifo_write_echoed(uint32_t const* buffer, size_t len)
+static inline bool cpu_fifo_write_echoed(uint32_t const* const buffer, size_t const len)
 {
   uint32_t echo;
 

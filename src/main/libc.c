@@ -66,7 +66,7 @@ __attribute__((used, weak)) size_t _write(int const file, uint8_t const* ptr, si
   return len;
 }
 
-__attribute__((used, weak, noreturn)) void _exit(int status)
+__attribute__((used, weak, noreturn)) void _exit(int const status)
 {
   (void)status;
   while (1)

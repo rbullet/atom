@@ -79,7 +79,7 @@ static thread_state_t const thread_transitions[THREAD_STATE_COUNT][THREAD_EVENT_
   [THREAD_SLEEPING][THREAD_EVENT_WAKEUP] = THREAD_READY,
 };
 
-bool scheduler_state_machine_process_event(thread_t* thread, thread_event_t event)
+bool scheduler_state_machine_process_event(thread_t* thread, thread_event_t const event)
 {
 #ifdef DEBUG
   ATOM_ASSERT(thread!=NULL && thread->state_lock.locked==false, "Thread must be non-null and its state lock must be unlocked");

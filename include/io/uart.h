@@ -170,7 +170,7 @@ static inline uint8_t uart_read_byte(uart_t* uart)
  *
  * @note Blocks the calling context until the byte has been transmitted.
  */
-static inline void uart_write_byte(uart_t* uart, uint8_t byte)
+static inline void uart_write_byte(uart_t* uart, uint8_t const byte)
 {
   uart_write(uart, &byte, 1);
 }
