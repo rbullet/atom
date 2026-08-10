@@ -3,12 +3,19 @@
 
 #include "rp2040/atom.h"
 
+#define PPB_BASE 0XE0000000
+#define PPB_VTOR_OFFSET 0XED08
+#define PPB_VTOR_TBLOFF_MASK 0XFFFFFF00
+#define PPB_VTOR_TBLOFF_OFFSET 8
+
+#define PPB_VTOR REG(PPB_BASE, PPB_VTOR_OFFSET)
+
 #define IRQ_VECTOR_COUNT 48
 
-// --- System IRQs ---
+// --- Exception handlers ---
 
 // @formatter:off
-// --- Forward declarations for IRQ handlers ---
+// --- Forward declarations ---
 void irq_handler_reset(void)         __attribute__((naked));                        // Reset handler
 void irq_handler_nmi(void)           __attribute__((alias("irq_handler_default"))); // NMI handler
 void irq_handler_hard_fault(void)    __attribute__((alias("irq_handler_default"))); // Hard fault handler
@@ -52,7 +59,7 @@ __attribute__((used)) void irq_handler_default(void); // Default handler (infini
 
 extern uint32_t const _emsp0; // End of MSP for core 0
 
-// --- Relocated vector table in RAM for dynamic overrides ---
+// --- Vector table template ---
 __attribute__((used, aligned(256))) volatile uint32_t const vector_table[IRQ_VECTOR_COUNT] __attribute__((section(".vector_table"))) = {
   (uint32_t)&_emsp0,                  // Initial stack pointer
   (uint32_t)irq_handler_reset,       // Reset handler
@@ -98,47 +105,17 @@ __attribute__((used, aligned(256))) volatile uint32_t const vector_table[IRQ_VEC
   (uint32_t)irq_handler_rtc           // RTC
 };
 
-// --- Interrupt vector table (placed in .vector_table section) ---
+// --- Runtime vector table ---
 __attribute__((section(".vector_table_ram"), aligned(256))) uint32_t relocated_vector_table[IRQ_VECTOR_COUNT];
 // @formatter:on
+
+// --- Interrupt state helpers ---
 
 inline bool in_interrupt(void)
 {
   uint32_t ipsr;
   __asm volatile ("mrs %0, ipsr" : "=r"(ipsr));
   return ipsr != 0;
-}
-
-void interrupts_init(void)
-{
-  memcpy(&relocated_vector_table, (void const*)&vector_table, sizeof(vector_table));
-  WITH_INTERRUPTS_DISABLED
-  {
-    volatile uint32_t* vtor = (volatile uint32_t*)0xE000ED08; // VTOR register
-    *vtor = ((uint32_t)&relocated_vector_table) & ~0xFFU;
-    __asm__ volatile("dsb");
-    __asm__ volatile("isb");
-  }
-}
-
-// --- Default IRQ handler (infinite wait loop) ---
-__attribute__((used)) void irq_handler_default(void)
-{
-  while (1);
-}
-
-// --- Read current handler from relocated table ---
-irq_handler_func_t interrupts_get_handler(interrupt_enum const irq)
-{
-  return (irq_handler_func_t)relocated_vector_table[irq];
-}
-
-// --- Set new handler in relocated table, return old handler ---
-irq_handler_func_t interrupts_set_handler(interrupt_enum const irq, irq_handler_func_t const handler)
-{
-  irq_handler_func_t const old_handler = interrupts_get_handler(irq); // save old handler
-  relocated_vector_table[irq] = ((uint32_t)handler); // write new handler
-  return old_handler; // return previous handler
 }
 
 bool interrupts_are_enabled(void)
@@ -148,7 +125,6 @@ bool interrupts_are_enabled(void)
   return (primask == 0);
 }
 
-//--- Enable interrupts and return previous PRIMASK state ---
 uint32_t interrupts_enable(void)
 {
   uint32_t primask;
@@ -156,7 +132,6 @@ uint32_t interrupts_enable(void)
   return primask;
 }
 
-//--- Disable interrupts and return previous PRIMASK state ---
 uint32_t interrupts_disable(void)
 {
   uint32_t primask;
@@ -164,8 +139,41 @@ uint32_t interrupts_disable(void)
   return primask;
 }
 
-//--- Restore interrupt state from saved PRIMASK value ---
 void interrupts_restore(uint32_t const state)
 {
   __asm volatile("msr primask, %0" :: "r"(state) : "memory");
+}
+
+// --- Interrupt initialization ---
+
+void interrupts_init(void)
+{
+  memcpy(&relocated_vector_table, (void const*)&vector_table, sizeof(vector_table));
+  WITH_INTERRUPTS_DISABLED
+  {
+    REG_SET_FIELD(PPB_VTOR, PPB_VTOR_TBLOFF, ((uint32_t)&relocated_vector_table) >> PPB_VTOR_TBLOFF_OFFSET);
+    __asm__ volatile("dsb");
+    __asm__ volatile("isb");
+  }
+}
+
+// --- Default exception/IRQ handler ---
+
+__attribute__((used)) void irq_handler_default(void)
+{
+  while (1);
+}
+
+// --- Interrupt handler accessors ---
+
+irq_handler_func_t interrupts_get_handler(interrupt_enum const irq)
+{
+  return (irq_handler_func_t)relocated_vector_table[irq];
+}
+
+irq_handler_func_t interrupts_set_handler(interrupt_enum const irq, irq_handler_func_t const handler)
+{
+  irq_handler_func_t const old_handler = interrupts_get_handler(irq);
+  relocated_vector_table[irq] = ((uint32_t)handler);
+  return old_handler;
 }
