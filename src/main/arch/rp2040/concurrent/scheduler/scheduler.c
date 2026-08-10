@@ -208,7 +208,7 @@ static inline thread_t* scheduler_pick_thread_on_current_core(void)
 
 static inline thread_t* scheduler_steal_thread_on_other_core(void)
 {
-  return scheduler_pick_next_thread_on_core((CPUID + 1) % CORE_COUNT);
+  return scheduler_pick_next_thread_on_core(CPU_IS_CORE_0 ? 1 : 0);
 }
 
 thread_t* scheduler_pick_next_thread(void)
