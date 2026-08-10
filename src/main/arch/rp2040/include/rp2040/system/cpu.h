@@ -1,17 +1,16 @@
 #pragma once
-
 #ifdef __cplusplus
 extern "C" {
 
 #endif
 
-#include <stdbool.h>
-#include <stddef.h>
 #include <stdint.h>
-
+#include <stddef.h>
+#include <stdbool.h>
 #include "util/helpers.h"
 
 // --- SIO peripheral registers (from RP2040 SVD) ---
+
 #ifndef SIO_BASE
 #define SIO_BASE                    0xD0000000U
 #endif
@@ -40,29 +39,29 @@ extern "C" {
 
 // --- CONTROL register bit definitions ---
 
-#define CPU_CONTROL_SPSEL_BIT       1U
+#define CPU_CONTROL_SPSEL_BIT 1
 
 // --- Stack mode selection ---
 
 typedef enum
 {
-  STACK_MODE_MSP = 0U,
-  STACK_MODE_PSP = 1U
+  STACK_MODE_MSP = 0U, ///< Main Stack Pointer
+  STACK_MODE_PSP = 1U ///< Process Stack Pointer
 } stack_mode_t;
 
 // --- Event and wait instructions ---
 
-static __attribute__((always_inline)) inline void sev(void)
+__attribute__((always_inline)) static inline void sev(void)
 {
   __asm volatile("sev" ::: "memory");
 }
 
-static __attribute__((always_inline)) inline void wfe(void)
+__attribute__((always_inline)) static inline void wfe(void)
 {
   __asm volatile("wfe" ::: "memory");
 }
 
-static __attribute__((always_inline)) inline void wfi(void)
+__attribute__((always_inline)) static inline void wfi(void)
 {
   __asm volatile("wfi" ::: "memory");
 }
@@ -72,19 +71,16 @@ static __attribute__((always_inline)) inline void wfi(void)
 static __attribute__((always_inline)) inline uint32_t cpu_control(void)
 {
   uint32_t value;
-
   __asm volatile("mrs %0, control" : "=r"(value));
-
   return value;
 }
 
 // --- Stack pointer selection ---
 
-static __attribute__((always_inline)) inline void cpu_stack_set_mode(stack_mode_t const mode)
+static __attribute__((always_inline)) inline void cpu_stack_set_mode(stack_mode_t mode)
 {
   uint32_t const old_value = cpu_control();
-  uint32_t const new_value = (old_value & ~(1U << CPU_CONTROL_SPSEL_BIT)) || ((uint32_t)mode << CPU_CONTROL_SPSEL_BIT);
-
+  uint32_t const new_value = (old_value & ~(1u << CPU_CONTROL_SPSEL_BIT)) | (mode << CPU_CONTROL_SPSEL_BIT);
   __asm volatile("msr control, %0" :: "r"(new_value) : "memory");
 }
 
@@ -111,7 +107,7 @@ static inline size_t cpu_fifo_write(uint32_t const* buffer, size_t const len)
       wfe();
     }
 
-    REG_WRITE(SIO_FIFO_WR, buffer[i]);
+    *SIO_FIFO_WR = buffer[i];
     sev();
   }
 
@@ -126,11 +122,9 @@ static inline size_t cpu_fifo_read(uint32_t* buffer, size_t const len)
     {
       wfe();
     }
-
-    buffer[i] = REG_READ(SIO_FIFO_RD);
+    buffer[i] = *SIO_FIFO_RD;
     sev();
   }
-
   return len;
 }
 
@@ -143,8 +137,7 @@ static inline bool cpu_fifo_try_read(uint32_t* value)
     return false;
   }
 
-  *value = REG_READ(SIO_FIFO_RD);
-
+  *value = *SIO_FIFO_RD;
   return true;
 }
 
@@ -155,9 +148,8 @@ static inline bool cpu_fifo_try_write(uint32_t const value)
     return false;
   }
 
-  REG_WRITE(SIO_FIFO_WR, value);
+  *SIO_FIFO_WR = value;
   sev();
-
   return true;
 }
 
@@ -166,12 +158,10 @@ static inline bool cpu_fifo_try_write(uint32_t const value)
 static inline void cpu_fifo_flush(void)
 {
   uint32_t dummy;
-
   while (cpu_fifo_try_read(&dummy))
   {
     __asm volatile("nop");
   }
-
   sev();
 }
 
