@@ -7,8 +7,8 @@
 
 static spinlock_t global_spinlock = SPINLOCK_INITIALIZER;
 
-__attribute__((used, weak)) ssize_t atom_console_read(void *buf, size_t size);
-__attribute__((used, weak)) ssize_t atom_console_write(const void *buf, size_t size);
+ssize_t __attribute__((used, weak)) atom_console_read(void *buf, size_t size);
+ssize_t __attribute__((used, weak)) atom_console_write(const void *buf, size_t size);
 
 // --- External symbols for heap boundaries (defined in linker script) ---
 extern volatile uint32_t _sheap;
@@ -19,19 +19,19 @@ static uint8_t* heap_end = NULL;
 
 static uint32_t interrupt_state[CORE_COUNT];
 
-__attribute__((used)) void __malloc_lock(__attribute__((unused)) struct _reent* r)
+void __attribute__((used)) __malloc_lock(__attribute__((unused)) struct _reent* r)
 {
   interrupt_state[CPUID] = interrupts_disable();
   spinlock_lock(&global_spinlock);
 }
 
-__attribute__((used)) void __malloc_unlock(__attribute__((unused)) struct _reent* r)
+void __attribute__((used)) __malloc_unlock(__attribute__((unused)) struct _reent* r)
 {
   spinlock_unlock(&global_spinlock);
   interrupts_restore(interrupt_state[CPUID]);
 }
 
-__attribute__((used)) void* _sbrk(ptrdiff_t const incr)
+void* __attribute__((used)) _sbrk(ptrdiff_t const incr)
 {
   if (heap_end == NULL)
   {
@@ -47,7 +47,7 @@ __attribute__((used)) void* _sbrk(ptrdiff_t const incr)
   return prev_heap_end;
 }
 
-__attribute__((used)) ssize_t _read(__attribute__((unused)) int const file, uint8_t* ptr, size_t const len)
+ssize_t __attribute__((used)) _read(__attribute__((unused)) int const file, uint8_t* ptr, size_t const len)
 {
   ssize_t const count = (ssize_t)len;
   for (ssize_t i = 0; i < count; i++)
@@ -72,17 +72,17 @@ __attribute__((used)) ssize_t _read(__attribute__((unused)) int const file, uint
   return count;
 }
 
-__attribute__((used)) ssize_t _write(__attribute__((unused)) int const file, uint8_t const* ptr, size_t const len)
+ssize_t __attribute__((used)) _write(__attribute__((unused)) int const file, uint8_t const* ptr, size_t const len)
 {
   return atom_console_write(ptr, len);
 }
 
-__attribute__((used, weak)) ssize_t atom_console_read(void *buf, size_t const size)
+ssize_t __attribute__((used, weak)) atom_console_read(void *buf, size_t const size)
 {
   return (ssize_t)uart_read(uart0, buf, size);
 }
 
-__attribute__((used, weak)) ssize_t atom_console_write(void const *buf, size_t const size)
+ssize_t __attribute__((used, weak)) atom_console_write(void const *buf, size_t const size)
 {
   return (ssize_t)uart_write(uart0, buf, size);
 }

@@ -52,11 +52,11 @@ static inline void gpio_set_direction(uint32_t const pin, gpio_dir_t const dir)
 {
   if (dir == GPIO_DIR_INPUT)
   {
-    *SIO_GPIO_OE_CLR = 1U << pin;
+    REG_WRITE(SIO_GPIO_OE_CLR, 1U << pin);
   }
   else
   {
-    *SIO_GPIO_OE_SET = 1U << pin;
+    REG_WRITE(SIO_GPIO_OE_SET, 1U << pin);
   }
 }
 

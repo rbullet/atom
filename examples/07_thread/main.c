@@ -10,7 +10,7 @@
 static uint32_t hello_thread_stack[HELLO_THREAD_STACK_SIZE];
 static uint32_t blink_thread_stack[BLINK_THREAD_STACK_SIZE];
 
-static void* logger_thread_routine(void* arg)
+static void* logger_thread_routine(void* const arg)
 {
   (void)arg;
   while (1)

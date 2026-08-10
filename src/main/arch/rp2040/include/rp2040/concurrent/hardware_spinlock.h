@@ -46,19 +46,19 @@ extern hardware_spinlock_t* const hardware_spinlock31;
 
 void hardware_spinlock_init(void);
 
-void hardware_spinlock_lock(hardware_spinlock_t* hardware_lock);
+void hardware_spinlock_lock(hardware_spinlock_t* hardware_spinlock);
 
-void hardware_spinlock_unlock(hardware_spinlock_t* hardware_lock);
+void hardware_spinlock_unlock(hardware_spinlock_t* hardware_spinlock);
 
-bool hardware_spinlock_try_lock(hardware_spinlock_t* hardware_lock);
+bool hardware_spinlock_try_lock(hardware_spinlock_t* hardware_spinlock);
 
 /**
  * @cond INTERNAL
  */
 
-static inline void hardware_spinlock_auto_unlock(hardware_spinlock_t** hardware_lock)
+static inline void hardware_spinlock_auto_unlock(hardware_spinlock_t** hardware_spinlock)
 {
-  hardware_spinlock_unlock(*hardware_lock);
+  hardware_spinlock_unlock(*hardware_spinlock);
 }
 
 #define _WITH_HARDWARE_SPINLOCK_BLOCK_WITH_ID(spinlock, ID)                               \

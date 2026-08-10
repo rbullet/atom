@@ -30,11 +30,11 @@ timestamp_t scheduler_timestamp_add(timestamp_t timestamp, duration_t duration);
 
 bool scheduler_timestamp_is_before(timestamp_t first, timestamp_t second);
 
-bool scheduler_timestamp_is_before_or_equal(timestamp_t first, timestamp_t other);
+bool scheduler_timestamp_is_before_or_equal(timestamp_t first, timestamp_t second);
 
-bool scheduler_timestamp_is_after(timestamp_t first, timestamp_t other);
+bool scheduler_timestamp_is_after(timestamp_t first, timestamp_t second);
 
-bool scheduler_timestamp_is_after_or_equal(timestamp_t first, timestamp_t other);
+bool scheduler_timestamp_is_after_or_equal(timestamp_t first, timestamp_t second);
 
 bool scheduler_timestamp_is_expired(timestamp_t deadline);
 

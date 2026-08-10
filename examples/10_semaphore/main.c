@@ -10,7 +10,7 @@ static uint32_t consumer_thread_stack[CONSUMER_THREAD_STACK_SIZE];
 
 static semaphore_t event_semaphore = SEMAPHORE_INITIALIZER(0);
 
-static void* producer_routine(void* arg)
+static void* producer_routine(void* const arg)
 {
   (void)arg;
 
@@ -26,7 +26,7 @@ static void* producer_routine(void* arg)
   return NULL;
 }
 
-static void* consumer_routine(void* arg)
+static void* consumer_routine(void* const arg)
 {
   (void)arg;
 

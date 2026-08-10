@@ -77,6 +77,7 @@ extern "C" {
 #include "concurrent/spinlock.h"
 #include "concurrent/thread.h"
 #include "concurrent/event_flags.h"
+#include "concurrent/scheduler.h"
 
 /** @} */
 
@@ -139,6 +140,8 @@ extern "C" {
 #include "util/assert.h"
 #include "util/helpers.h"
 #include "util/log.h"
+
+uint32_t cpu_get_id(void);
 
 /** @} */
 

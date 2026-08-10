@@ -109,7 +109,7 @@ void condition_variable_wait(condition_variable_t* condition_variable, mutex_t* 
  * The awakened thread will return from condition_variable_wait() only after it has
  * successfully reacquired the associated mutex.
  *
- * @param condition Condition variable to signal.
+ * @param condition_variable Condition variable to signal.
  *
  * @pre condition must be initialized.
  *
@@ -118,7 +118,7 @@ void condition_variable_wait(condition_variable_t* condition_variable, mutex_t* 
  * @warning Must not be called from interrupt context unless explicitly
  *          supported by the scheduler implementation.
  */
-void condition_variable_signal(condition_variable_t* condition);
+void condition_variable_signal(condition_variable_t* condition_variable);
 
 /**
  * @brief Wake all waiting threads.
@@ -132,7 +132,7 @@ void condition_variable_signal(condition_variable_t* condition);
  *
  * @param condition_variable Condition variable to broadcast.
  *
- * @pre condition must be initialized.
+ * @pre condition_variable must be initialized.
  *
  * @note Useful when a state change may satisfy multiple waiting threads.
  *

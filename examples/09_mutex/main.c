@@ -11,7 +11,7 @@ static uint32_t shared_counter = 0;
 
 static mutex_t mutex = MUTEX_INITIALIZER;
 
-static void* increment_routine(void* arg)
+static void* increment_routine(void* const arg)
 {
   (void)arg;
   for (int i = 0; i < ITERATION_COUNT; i++)

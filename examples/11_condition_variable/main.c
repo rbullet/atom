@@ -13,7 +13,7 @@ static bool school_is_over = false;
 static mutex_t mutex = MUTEX_INITIALIZER;
 static condition_variable_t end_of_school = CONDITION_VARIABLE_INITIALIZER;
 
-static void* student_routine(void* arg)
+static void* student_routine(void* const arg)
 {
   char const* const student_name = (char const* const)arg;
   WITH_MUTEX(&mutex)

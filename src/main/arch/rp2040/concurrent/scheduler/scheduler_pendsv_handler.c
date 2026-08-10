@@ -25,7 +25,7 @@ void scheduler_yield(void)
   }
 }
 
-__attribute__((naked)) void scheduler_pendsv_handler(void)
+void __attribute__((naked)) scheduler_pendsv_handler(void)
 {
   __asm volatile(
     "cpsid   i                          \n" // disable interrupts

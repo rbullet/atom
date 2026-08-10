@@ -55,7 +55,7 @@ void irq_handler_i2c0(void)          __attribute__((alias("irq_handler_default")
 void irq_handler_i2c1(void)          __attribute__((alias("irq_handler_default"))); // I2C 1
 void irq_handler_rtc(void)           __attribute__((alias("irq_handler_default"))); // RTC
 
-__attribute__((used)) void irq_handler_default(void); // Default handler (infinite wait)
+void __attribute__((used)) irq_handler_default(void); // Default handler (infinite wait)
 
 extern uint32_t const _emsp0; // End of MSP for core 0
 
@@ -159,7 +159,7 @@ void interrupts_init(void)
 
 // --- Default exception/IRQ handler ---
 
-__attribute__((used)) void irq_handler_default(void)
+void __attribute__((used)) irq_handler_default(void)
 {
   while (1);
 }

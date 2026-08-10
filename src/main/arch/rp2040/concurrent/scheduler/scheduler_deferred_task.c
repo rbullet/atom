@@ -9,7 +9,7 @@ deferred_task_context_t deferred_task_context = {
   .thread = NULL
 };
 
-__attribute__((noreturn)) void* scheduler_deferred_task_worker(void* const arg)
+void* __attribute__((noreturn)) scheduler_deferred_task_worker(void* const arg)
 {
   (void)arg;
   for (;;)

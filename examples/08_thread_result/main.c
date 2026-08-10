@@ -8,7 +8,7 @@
 static uint32_t alice_thread_stack[ALICE_THREAD_STACK_SIZE];
 static char blackboard[256];
 
-static void* alice_thread_routine(void* arg)
+static void* alice_thread_routine(void* const arg)
 {
   (void)arg;
   printf("Give me a second, I'll solve your equation.\r\n");

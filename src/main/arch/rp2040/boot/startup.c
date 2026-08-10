@@ -42,7 +42,7 @@ static void startup_init_bss(void)
 
 // --- Reset handler ---
 
-__attribute__((noreturn, used)) void irq_handler_reset(void)
+void __attribute__((noreturn, used)) irq_handler_reset(void)
 {
   startup_init_stack(&_estack0);
   startup_init_data();

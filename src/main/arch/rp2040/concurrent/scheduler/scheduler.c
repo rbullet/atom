@@ -105,7 +105,7 @@ void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const 
   thread->sp = sp;
 }
 
-__attribute__((noreturn)) static void scheduler_enter_idle(void)
+static __attribute__((noreturn)) void scheduler_enter_idle(void)
 {
   scheduler_thread_idle(NULL); // Enter idle loop on core 1
 }
