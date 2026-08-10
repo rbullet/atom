@@ -1,5 +1,7 @@
 #include "internal.h"
 
+// --- Internal state ---
+
 static thread_t bootstrap_thread;
 static thread_t idle_thread[CORE_COUNT];
 static thread_t deferred_task_thread;
@@ -7,7 +9,11 @@ static thread_t deferred_task_thread;
 static uint32_t idle_thread_stack[CORE_COUNT][IDLE_THREAD_STACK_SIZE];
 static uint32_t deferred_task_thread_stack[DEFERRED_TASK_THREAD_STACK_SIZE];
 
+static duration_t const scheduler_task_quantum = DURATION_INITIALIZER(10, MILLISECONDS);
+
 static bool core1_started = false;
+
+// --- Per-core execution context ---
 
 execution_context_t execution_context[CORE_COUNT] =
 {
@@ -15,9 +21,28 @@ execution_context_t execution_context[CORE_COUNT] =
   {.spinlock = SPINLOCK_INITIALIZER, .ready_queue = LIST_INITIALIZER, .current_thread = NULL, .idle_thread = &idle_thread[1]},
 };
 
-static void scheduler_thread_terminate_current(void* retval);
+// --- Forward declarations ---
 
-static __attribute__((noreturn)) void* idle_thread_manager(__attribute__((unused)) void* const arg)
+static void scheduler_thread_exit(void* retval);
+
+// --- Thread lifecycle ---
+
+void scheduler_thread_exit(void* retval)
+{
+  thread_t* thread = scheduler_thread_current();
+  WITH_INTERRUPTS_DISABLED
+  {
+    WITH_SPINLOCK(&thread->state_lock)
+    {
+      thread_terminated_context_init(&thread->context.terminated, retval);
+    }
+  }
+  scheduler_state_machine_process_event(thread, THREAD_EVENT_TERMINATE);
+}
+
+// --- Idle thread ---
+
+static __attribute__((noreturn)) void* scheduler_thread_idle(__attribute__((unused)) void* const arg)
 {
 #ifdef DEBUG
   ATOM_ASSERT(interrupts_are_enabled(), "Interrupts must be enabled in idle thread");
@@ -27,6 +52,8 @@ static __attribute__((noreturn)) void* idle_thread_manager(__attribute__((unused
     wfi();
   }
 }
+
+// --- Thread Initialisation ---
 
 static void scheduler_thread_init_common(thread_t* const thread, uint32_t* const stack_base, size_t const stack_size)
 {
@@ -49,7 +76,7 @@ static void scheduler_thread_init_bootstrap(thread_t* thread, uint32_t* stack_ba
   execution_context[CPUID].current_thread = thread;
 }
 
-// --- Thread Initialisation ---
+
 void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const stack_size, thread_func_t const start_routine, void* arg)
 {
   scheduler_thread_init_common(thread, stack_base, stack_size);
@@ -61,7 +88,7 @@ void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const 
   // Push initial CPU context on stack
   *(--sp) = XPSR_THREAD; // xPSR
   *(--sp) = (uint32_t)start_routine; // PC
-  *(--sp) = (uint32_t)&scheduler_thread_terminate_current; // LR
+  *(--sp) = (uint32_t)&scheduler_thread_exit; // LR
   *(--sp) = 12; // R12
   *(--sp) = 3; // R3
   *(--sp) = 2; // R2
@@ -78,23 +105,12 @@ void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const 
   thread->sp = sp;
 }
 
-void scheduler_thread_terminate_current(void* retval)
-{
-  thread_t* thread = scheduler_thread_current();
-  WITH_INTERRUPTS_DISABLED
-  {
-    WITH_SPINLOCK(&thread->state_lock)
-    {
-      thread_terminated_context_init(&thread->context.terminated, retval);
-    }
-  }
-  scheduler_state_machine_process_event(thread, THREAD_EVENT_TERMINATE);
-}
-
 __attribute__((noreturn)) static void scheduler_enter_idle(void)
 {
-  idle_thread_manager(NULL); // Enter idle loop on core 1
+  scheduler_thread_idle(NULL); // Enter idle loop on core 1
 }
+
+// --- Scheduler initialization ---
 
 void scheduler_init_hardware(void)
 {
@@ -128,7 +144,7 @@ void scheduler_init(void)
     deferred_task_context.thread = &deferred_task_thread;
     scheduler_state_machine_process_event(&deferred_task_thread, THREAD_EVENT_START);
 
-    scheduler_thread_init(&idle_thread[CPUID], idle_thread_stack[CPUID], IDLE_THREAD_STACK_SIZE, idle_thread_manager, NULL);
+    scheduler_thread_init(&idle_thread[CPUID], idle_thread_stack[CPUID], IDLE_THREAD_STACK_SIZE, scheduler_thread_idle, NULL);
     scheduler_state_machine_process_event(&idle_thread[CPUID], THREAD_EVENT_START);
   }
   else
@@ -144,7 +160,6 @@ void scheduler_init(void)
   }
 }
 
-// --- Boot Core 1 ---
 void scheduler_start_secondary(void)
 {
 #ifdef DEBUG
@@ -171,8 +186,7 @@ void scheduler_start_secondary(void)
   core1_started = true;
 }
 
-
-static duration_t const scheduler_task_quantum = DURATION_INITIALIZER(10, MILLISECONDS);
+// --- Thread selection ---
 
 static inline thread_t* scheduler_pick_next_thread_on_core(uint32_t const cpuid)
 {
@@ -206,6 +220,8 @@ thread_t* scheduler_pick_next_thread(void)
   }
   return next != NULL ? next : execution_context[CPUID].idle_thread;
 }
+
+// --- Context switching ---
 
 void scheduler_save_current_sp(uint32_t* sp)
 {
