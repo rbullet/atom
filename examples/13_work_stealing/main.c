@@ -11,49 +11,14 @@ static uint32_t sarah_thread_stack[THREAD_STACK_SIZE];
 
 static mutex_t mutex = MUTEX_INITIALIZER;
 
-static void* annie_thread_routine(void* arg)
+static void* hello_thread_routine(void* arg)
 {
+  char* firstname = arg;
   while (1)
   {
     WITH_MUTEX(&mutex)
     {
-      printf("Annie: Hello from CORE %lu!\r\n", cpu_get_id());
-    }
-  }
-  return NULL;
-}
-
-static void* brian_thread_routine(void* arg)
-{
-  while (1)
-  {
-    WITH_MUTEX(&mutex)
-    {
-      printf("Brian: Hello from CORE %lu!\r\n", cpu_get_id());
-    }
-  }
-  return NULL;
-}
-
-static void* james_thread_routine(void* arg)
-{
-  while (1)
-  {
-    WITH_MUTEX(&mutex)
-    {
-      printf("James: Hello from CORE %lu!\r\n", cpu_get_id());
-    }
-  }
-  return NULL;
-}
-
-static void* sarah_thread_routine(void* arg)
-{
-  while (1)
-  {
-    WITH_MUTEX(&mutex)
-    {
-      printf("Sarah: Hello from CORE %lu!\r\n", cpu_get_id());
+      printf("%s: Hello from CORE %lu!\r\n", firstname, cpu_get_id());
     }
   }
   return NULL;
@@ -67,8 +32,8 @@ int main(void)
     &annie_thread,
     annie_thread_stack,
     THREAD_STACK_SIZE,
-    annie_thread_routine,
-    NULL
+    hello_thread_routine,
+    "Annie"
   );
   thread_start(&annie_thread);
 
@@ -78,8 +43,8 @@ int main(void)
     &brian_thread,
     brian_thread_stack,
     THREAD_STACK_SIZE,
-    brian_thread_routine,
-    NULL
+    hello_thread_routine,
+    "Brian"
   );
   thread_start(&brian_thread);
 
@@ -89,8 +54,8 @@ int main(void)
     &james_thread,
     james_thread_stack,
     THREAD_STACK_SIZE,
-    james_thread_routine,
-    NULL
+    hello_thread_routine,
+    "James"
   );
   thread_start(&james_thread);
 
@@ -100,8 +65,8 @@ int main(void)
     &sarah_thread,
     sarah_thread_stack,
     THREAD_STACK_SIZE,
-    sarah_thread_routine,
-    NULL
+    hello_thread_routine,
+    "Sarah"
   );
   thread_start(&sarah_thread);
 
