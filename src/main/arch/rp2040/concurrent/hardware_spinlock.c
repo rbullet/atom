@@ -4,8 +4,9 @@
 #include "rp2040/atom.h"
 
 // --- SIO peripheral registers ---
-
+#ifndef SIO_BASE
 #define SIO_BASE 0XD0000000
+#endif
 #define SIO_SPINLOCK0_OFFSET 0X0100
 #define SIO_SPINLOCK1_OFFSET 0X0104
 #define SIO_SPINLOCK2_OFFSET 0X0108

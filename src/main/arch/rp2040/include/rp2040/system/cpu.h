@@ -1,81 +1,95 @@
 #pragma once
+
 #ifdef __cplusplus
 extern "C" {
 
 #endif
 
-#include <stdint.h>
-#include <stddef.h>
 #include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+
 #include "util/helpers.h"
 
 // --- SIO peripheral registers (from RP2040 SVD) ---
-#define SIO_BASE 0XD0000000
-#define SIO_CPUID_OFFSET 0X0000
-#define SIO_FIFO_ST_OFFSET 0X0050
-#define SIO_FIFO_ST_VLD_MASK 0X1
-#define SIO_FIFO_ST_VLD_OFFSET 0
-#define SIO_FIFO_ST_RDY_MASK 0X2
-#define SIO_FIFO_ST_RDY_OFFSET 1
-#define SIO_FIFO_RD_OFFSET 0X0058
-#define SIO_FIFO_WR_OFFSET 0X0054
+#ifndef SIO_BASE
+#define SIO_BASE                    0xD0000000U
+#endif
 
-#define SIO_FIFO_ST     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_ST_OFFSET))
-#define SIO_FIFO_RD     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_RD_OFFSET))
-#define SIO_FIFO_WR     ((volatile uint32_t* const)(SIO_BASE + SIO_FIFO_WR_OFFSET))
+#define SIO_CPUID_OFFSET            0x0000U
 
-#define CORE_COUNT 2
-#define CPUID           (*((volatile uint32_t*)(SIO_BASE + SIO_CPUID_OFFSET)))
-#define CPU_IS_CORE_0   (CPUID == 0)   // Check if running on core 0
-#define CPU_IS_CORE_1   (CPUID == 1)   // Check if running on core 1
+#define SIO_FIFO_ST_OFFSET          0x0050U
+#define SIO_FIFO_WR_OFFSET          0x0054U
+#define SIO_FIFO_RD_OFFSET          0x0058U
+
+#define SIO_FIFO_ST_VLD_MASK        0x00000001U
+#define SIO_FIFO_ST_VLD_OFFSET      0U
+#define SIO_FIFO_ST_RDY_MASK        0x00000002U
+#define SIO_FIFO_ST_RDY_OFFSET      1U
+
+#define SIO_FIFO_ST                 REG(SIO_BASE, SIO_FIFO_ST_OFFSET)
+#define SIO_FIFO_WR                 REG(SIO_BASE, SIO_FIFO_WR_OFFSET)
+#define SIO_FIFO_RD                 REG(SIO_BASE, SIO_FIFO_RD_OFFSET)
+
+// --- CPU identification ---
+
+#define CORE_COUNT                  2U
+#define CPUID                       REG_READ(REG(SIO_BASE, SIO_CPUID_OFFSET))
+#define CPU_IS_CORE_0               (CPUID == 0U)
+#define CPU_IS_CORE_1               (CPUID == 1U)
 
 // --- CONTROL register bit definitions ---
-#define CPU_CONTROL_SPSEL_BIT 1
+
+#define CPU_CONTROL_SPSEL_BIT       1U
 
 // --- Stack mode selection ---
+
 typedef enum
 {
-  STACK_MODE_MSP = 0U, ///< Main Stack Pointer
-  STACK_MODE_PSP = 1U ///< Process Stack Pointer
-} stack_mode_enum;
+  STACK_MODE_MSP = 0U,
+  STACK_MODE_PSP = 1U
+} stack_mode_t;
 
-// --- Send Event (wake other cores) ---
-__attribute__((always_inline)) static inline void sev(void)
+// --- Event and wait instructions ---
+
+static __attribute__((always_inline)) inline void sev(void)
 {
-  __asm__ volatile("sev" ::: "memory");
+  __asm volatile("sev" ::: "memory");
 }
 
-// --- Wait For Event (low-power sleep until event) ---
-__attribute__((always_inline)) static inline void wfe(void)
+static __attribute__((always_inline)) inline void wfe(void)
 {
-  __asm__ volatile("wfe" ::: "memory");
+  __asm volatile("wfe" ::: "memory");
 }
 
-// --- Wait For Interrupt (low-power sleep until interrupt) ---
-__attribute__((always_inline)) static inline void wfi(void)
+static __attribute__((always_inline)) inline void wfi(void)
 {
-  __asm__ volatile("wfi" ::: "memory");
+  __asm volatile("wfi" ::: "memory");
 }
 
+// --- CPU control register ---
 
-
-// --- Read CONTROL register ---
 static __attribute__((always_inline)) inline uint32_t cpu_control(void)
 {
   uint32_t value;
-  __asm__ volatile("mrs %0, control" : "=r"(value));
+
+  __asm volatile("mrs %0, control" : "=r"(value));
+
   return value;
 }
 
-// --- Set stack pointer mode (MSP/PSP) ---
-static __attribute__((always_inline)) inline void cpu_stack_set_mode(stack_mode_enum mode)
+// --- Stack pointer selection ---
+
+static __attribute__((always_inline)) inline void cpu_stack_set_mode(stack_mode_t const mode)
 {
   uint32_t const old_value = cpu_control();
-  uint32_t const new_value = (old_value & ~(1u << CPU_CONTROL_SPSEL_BIT)) | (mode << CPU_CONTROL_SPSEL_BIT);
-  __asm__ volatile("msr control, %0" :: "r"(new_value) : "memory");
+  uint32_t const new_value = (old_value & ~(1U << CPU_CONTROL_SPSEL_BIT)) || ((uint32_t)mode << CPU_CONTROL_SPSEL_BIT);
+
+  __asm volatile("msr control, %0" :: "r"(new_value) : "memory");
 }
 
-// --- CPU FIFO status helpers ---
+// --- Inter-core FIFO status ---
+
 static inline bool cpu_fifo_is_readable(void)
 {
   return REG_GET_FIELD(SIO_FIFO_ST, SIO_FIFO_ST_VLD);
@@ -86,7 +100,8 @@ static inline bool cpu_fifo_is_writable(void)
   return REG_GET_FIELD(SIO_FIFO_ST, SIO_FIFO_ST_RDY);
 }
 
-// --- CPU FIFO blocking write ---
+// --- Inter-core FIFO blocking operations ---
+
 static inline size_t cpu_fifo_write(uint32_t const* buffer, size_t const len)
 {
   for (size_t i = 0; i < len; i++)
@@ -96,14 +111,13 @@ static inline size_t cpu_fifo_write(uint32_t const* buffer, size_t const len)
       wfe();
     }
 
-    *SIO_FIFO_WR = buffer[i];
+    REG_WRITE(SIO_FIFO_WR, buffer[i]);
     sev();
   }
 
   return len;
 }
 
-// --- CPU FIFO blocking read ---
 static inline size_t cpu_fifo_read(uint32_t* buffer, size_t const len)
 {
   for (size_t i = 0; i < len; i++)
@@ -112,13 +126,16 @@ static inline size_t cpu_fifo_read(uint32_t* buffer, size_t const len)
     {
       wfe();
     }
-    buffer[i] = *SIO_FIFO_RD;
+
+    buffer[i] = REG_READ(SIO_FIFO_RD);
     sev();
   }
+
   return len;
 }
 
-// --- CPU FIFO non-blocking try read ---
+// --- Inter-core FIFO non-blocking operations ---
+
 static inline bool cpu_fifo_try_read(uint32_t* value)
 {
   if (!cpu_fifo_is_readable())
@@ -126,11 +143,11 @@ static inline bool cpu_fifo_try_read(uint32_t* value)
     return false;
   }
 
-  *value = *SIO_FIFO_RD;
+  *value = REG_READ(SIO_FIFO_RD);
+
   return true;
 }
 
-// --- CPU FIFO non-blocking try write ---
 static inline bool cpu_fifo_try_write(uint32_t const value)
 {
   if (!cpu_fifo_is_writable())
@@ -138,19 +155,23 @@ static inline bool cpu_fifo_try_write(uint32_t const value)
     return false;
   }
 
-  *SIO_FIFO_WR = value;
+  REG_WRITE(SIO_FIFO_WR, value);
   sev();
+
   return true;
 }
 
-// --- CPU FIFO flush (discard all pending reads) ---
+// --- Inter-core FIFO maintenance ---
+
 static inline void cpu_fifo_flush(void)
 {
   uint32_t dummy;
+
   while (cpu_fifo_try_read(&dummy))
   {
     __asm volatile("nop");
   }
+
   sev();
 }
 

@@ -7,7 +7,10 @@ extern "C" {
 #include "util/helpers.h"
 
 // --- SIO / PADS_BANK0 / IO_BANK0 peripheral registers (from RP2040 SVD) ---
+#ifndef SIO_BASE
 #define SIO_BASE 0XD0000000
+#endif
+
 #define SIO_GPIO_IN_OFFSET 0X0004
 #define SIO_GPIO_OUT_SET_OFFSET 0X0014
 #define SIO_GPIO_OUT_CLR_OFFSET 0X0018
