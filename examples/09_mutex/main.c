@@ -50,8 +50,8 @@ int main(void)
   thread_start(&increment_thread_2);
 
   printf("Waiting for workers...\r\n");
-  thread_join(&increment_thread_1);
-  thread_join(&increment_thread_2);
+  thread_join(&increment_thread_1, NULL);
+  thread_join(&increment_thread_2, NULL);
 
   printf("Final value of shared_counter: %lu (expected %lu)\r\n", shared_counter, 2 * ITERATION_COUNT);
 

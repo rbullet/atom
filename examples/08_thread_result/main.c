@@ -33,7 +33,8 @@ int main(void)
   printf("Hey Alice, if 2x = 10, what is the value of x?\r\n");
   thread_start(&alice_thread);
 
-  char const* answer = thread_join(&alice_thread);
+  char const* answer = NULL;
+  thread_join(&alice_thread, (void**)&answer);
   printf("Alice answered: %s\r\n", answer);
 
   while (1)

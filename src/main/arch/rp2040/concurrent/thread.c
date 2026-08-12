@@ -47,7 +47,7 @@ void thread_sleep(duration_t const duration)
   scheduler_state_machine_process_event(thread, THREAD_EVENT_SLEEP);
 }
 
-void* thread_join(thread_t* thread)
+bool thread_join(thread_t* thread, void** retval)
 {
   thread_t* const current = thread_current();
   WITH_INTERRUPTS_DISABLED
@@ -65,5 +65,9 @@ void* thread_join(thread_t* thread)
       scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
     }
   }
-  return thread->context.retval;;
+  if (retval)
+  {
+    *retval = thread->context.retval;
+  }
+  return true;
 }

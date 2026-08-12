@@ -238,19 +238,21 @@ void thread_notify(thread_t* thread);
 
 
 /**
- * @brief Wait for thread completion.
+ * @brief Waits for thread completion.
  *
  * Blocks until the specified thread terminates.
  *
  * @param thread Thread to join.
+ * @param retval Optional pointer to store the thread's return value.
+ *               May be NULL if the return value is not needed.
  *
- * @return Thread return value.
+ * @return true if the thread terminated successfully, false otherwise.
  *
  * @pre thread must not be the current thread.
  *
  * @note Must be called from thread context.
  */
-void* thread_join(thread_t* thread);
+bool thread_join(thread_t* thread, void** retval);
 
 
 /** @} */
