@@ -44,9 +44,11 @@ extern "C" {
  */
 typedef struct semaphore_t
 {
+  /** @cond INTERNAL */
   spinlock_t spinlock; ///< Spinlock used for protecting the semaphore state.
   uint32_t permits;    ///< Number of available permits.
   list_t waiters;      ///< Threads waiting for a permit.
+  /** @endcond */
 } semaphore_t;
 
 

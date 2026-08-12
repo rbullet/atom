@@ -67,10 +67,12 @@ typedef struct thread_t thread_t;
  */
 typedef struct mutex_t
 {
+  /** @cond INTERNAL */
   spinlock_t spinlock;  ///< Spinlock.
   uint32_t count;       ///< Recursive acquisition depth.
   thread_t* owner;      ///< Thread currently owning the mutex.
   list_t waiters;       ///< Threads waiting to acquire the mutex.
+  /** @endcond */
 } mutex_t;
 
 

@@ -40,8 +40,10 @@ extern "C" {
  */
 typedef struct condition_variable_t
 {
+  /** @cond INTERNAL */
   spinlock_t spinlock;  ///< Lazily allocated spinlock used for protecting the condition variable state.
   list_t waiters;       ///< Threads waiting on the condition variable.
+  /** @endcond */
 } condition_variable_t;
 
 /**

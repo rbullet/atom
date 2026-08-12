@@ -34,7 +34,7 @@ void scheduler_thread_exit(void* retval)
   {
     WITH_SPINLOCK(&thread->state_lock)
     {
-      thread_terminated_context_init(&thread->context.terminated, retval);
+      thread_terminated_context_init(&thread->context, retval);
     }
   }
   scheduler_state_machine_process_event(thread, THREAD_EVENT_TERMINATE);

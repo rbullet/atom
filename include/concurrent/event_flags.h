@@ -44,9 +44,11 @@ typedef uint32_t event_flags_mask_t;
  */
 typedef struct
 {
+  /** @cond INTERNAL */
   spinlock_t spinlock;
   event_flags_mask_t flags;
   list_t waiters;
+  /** @endcond */
 } event_flags_t;
 
 /**

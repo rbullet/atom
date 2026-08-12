@@ -118,52 +118,21 @@ static thread_state_transition_result_t thread_ready_activate(thread_t* thread)
 {
   thread_t* const current = execution_context[CPUID].current_thread;
 
-  if (thread == execution_context[CPUID].idle_thread)
+  if (thread != execution_context[CPUID].idle_thread)
   {
-    return SUCCESS;
+    WITH_INTERRUPTS_DISABLED
+    {
+      WITH_SPINLOCK(&execution_context[CPUID].spinlock)
+      {
+        list_push(&execution_context[CPUID].ready_queue, &thread->scheduler_node);
+      }
+    }
   }
 
-  WITH_SPINLOCK(&execution_context[CPUID].spinlock)
-  {
-    list_push(&execution_context[CPUID].ready_queue, &thread->scheduler_node);
-  }
-
-  if (thread == current)
-  {
-    return REQUIRES_EXTRA_CONTEXT_SWITCH;
-  }
-
-  return SUCCESS;
+  return thread == current ? REQUIRES_EXTRA_CONTEXT_SWITCH : SUCCESS;
 }
 
-static void thread_sleeping_wakeup(void* arg)
-{
-  thread_t* thread = arg;
-  scheduler_state_machine_process_event(thread, THREAD_EVENT_WAKEUP);
-}
-
-static thread_state_transition_result_t thread_sleeping_activate(thread_t* thread)
-{
-#ifdef DEBUG
-  ATOM_ASSERT(thread->context.type == THREAD_CONTEXT_SLEEP, "The current thread context must be a THREAD_CONTEXT_SLEEP");
-#endif
-
-  thread->context.sleep.wakeup_task.callback = thread_sleeping_wakeup;
-  thread->context.sleep.wakeup_task.arg = thread;
-  scheduler_deferred_task_start(&thread->context.sleep.wakeup_task);
-  return REQUIRES_EXTRA_CONTEXT_SWITCH;
-}
-
-static void thread_sleeping_leave(thread_t* thread)
-{
-#ifdef DEBUG
-  ATOM_ASSERT(thread->context.type == THREAD_CONTEXT_SLEEP, "The current thread context must be a THREAD_CONTEXT_SLEEP");
-#endif
-
-  scheduler_deferred_task_cancel(&thread->context.sleep.wakeup_task);
-}
-
-static void thread_blocked_wakeup(void* arg)
+static void thread_wakeup_callback(void* arg)
 {
   thread_t* thread = arg;
   bool wakeup = false;
@@ -171,9 +140,23 @@ static void thread_blocked_wakeup(void* arg)
   {
     WITH_SPINLOCK(&thread->state_lock)
     {
-      if (thread->state == THREAD_BLOCKED)
+      if (thread->state == THREAD_SLEEPING)
       {
-        thread->context.wait_on_queue_with_timeout.timed_out = true;
+        thread->context.timeout.timed_out = true;
+        wakeup = true;
+      }
+      else if (thread->state == THREAD_BLOCKED)
+      {
+        switch (thread->context.type)
+        {
+        case THREAD_CONTEXT_WAIT_WITH_TIMEOUT:
+        case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT:
+        case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT:
+          thread->context.timeout.timed_out = true;
+          break;
+        default:
+          ATOM_ASSERT(false, "Invalid thread context type for wakeup");
+        }
         wakeup = true;
       }
     }
@@ -184,15 +167,49 @@ static void thread_blocked_wakeup(void* arg)
   }
 }
 
+static thread_state_transition_result_t thread_sleeping_activate(thread_t* thread)
+{
+#ifdef DEBUG
+  ATOM_ASSERT(thread->context.type == THREAD_CONTEXT_SLEEP, "The current thread context must be a THREAD_CONTEXT_SLEEP");
+#endif
+
+  thread->context.timeout.wakeup_task.callback = thread_wakeup_callback;
+  thread->context.timeout.wakeup_task.arg = thread;
+  scheduler_deferred_task_start(&thread->context.timeout.wakeup_task);
+  return REQUIRES_EXTRA_CONTEXT_SWITCH;
+}
+
+static void thread_sleeping_leave(thread_t* thread)
+{
+#ifdef DEBUG
+  ATOM_ASSERT(thread->context.type == THREAD_CONTEXT_SLEEP, "The current thread context must be a THREAD_CONTEXT_SLEEP");
+#endif
+
+  scheduler_deferred_task_cancel(&thread->context.timeout.wakeup_task);
+}
+
+static inline bool is_blocked_thread_context(thread_context_type_t const type)
+{
+  switch (type)
+  {
+  case THREAD_CONTEXT_WAIT:
+  case THREAD_CONTEXT_WAIT_WITH_TIMEOUT:
+  case THREAD_CONTEXT_WAIT_ON_QUEUE:
+  case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT:
+  case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM:
+  case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT:
+    return true;
+  default:
+    return false;
+  }
+}
+
 static thread_state_transition_result_t thread_blocked_activate(thread_t* thread)
 {
 #ifdef DEBUG
   ATOM_ASSERT(
-    (thread->context.type == THREAD_CONTEXT_WAIT) ||
-    (thread->context.type == THREAD_CONTEXT_WAIT_ON_QUEUE) ||
-    (thread->context.type == THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT) ||
-    (thread->context.type == THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM),
-    "The current thread context must be a THREAD_CONTEXT_WAIT or THREAD_CONTEXT_WAIT_ON_QUEUE or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM"
+    is_blocked_thread_context(thread->context.type),
+    "The current thread context must be a THREAD_CONTEXT_WAIT or THREAD_CONTEXT_WAIT_WITH_TIMEOUT or THREAD_CONTEXT_WAIT_ON_QUEUE or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT"
   );
 #endif
 
@@ -201,23 +218,38 @@ static thread_state_transition_result_t thread_blocked_activate(thread_t* thread
   case THREAD_CONTEXT_WAIT:
     break;
 
+  case THREAD_CONTEXT_WAIT_WITH_TIMEOUT:
+    thread->context.timeout.wakeup_task.callback = thread_wakeup_callback;
+    thread->context.timeout.wakeup_task.arg = thread;
+    thread->context.timeout.timed_out = false;
+    scheduler_deferred_task_start(&thread->context.timeout.wakeup_task);
+    break;
+
   case THREAD_CONTEXT_WAIT_ON_QUEUE:
-    list_push(thread->context.wait_on_queue.wait_queue, &thread->scheduler_node);
-    spinlock_unlock(thread->context.wait_on_queue.wait_queue_lock);
+    list_push(thread->context.wait.wait_queue, &thread->scheduler_node);
+    spinlock_unlock(thread->context.wait.wait_queue_lock);
     break;
 
   case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT:
-    thread->context.wait_on_queue_with_timeout.wakeup_task.callback = thread_blocked_wakeup;
-    thread->context.wait_on_queue_with_timeout.wakeup_task.arg = thread;
-    thread->context.wait_on_queue_with_timeout.timed_out = false;
-    list_push(thread->context.wait_on_queue_with_timeout.wait_queue, &thread->scheduler_node);
-    scheduler_deferred_task_start(&thread->context.wait_on_queue_with_timeout.wakeup_task);
-    spinlock_unlock(thread->context.wait_on_queue_with_timeout.wait_queue_lock);
+    thread->context.timeout.wakeup_task.callback = thread_wakeup_callback;
+    thread->context.timeout.wakeup_task.arg = thread;
+    thread->context.timeout.timed_out = false;
+    list_push(thread->context.wait.wait_queue, &thread->scheduler_node);
+    scheduler_deferred_task_start(&thread->context.timeout.wakeup_task);
+    spinlock_unlock(thread->context.wait.wait_queue_lock);
     break;
 
   case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM:
-    list_push(thread->context.wait_on_queue_with_custom_param.wait_queue, &thread->scheduler_node);
-    spinlock_unlock(thread->context.wait_on_queue_with_custom_param.wait_queue_lock);
+    list_push(thread->context.wait.wait_queue, &thread->scheduler_node);
+    spinlock_unlock(thread->context.wait.wait_queue_lock);
+    break;
+  case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT:
+    thread->context.timeout.wakeup_task.callback = thread_wakeup_callback;
+    thread->context.timeout.wakeup_task.arg = thread;
+    thread->context.timeout.timed_out = false;
+    list_push(thread->context.wait.wait_queue, &thread->scheduler_node);
+    scheduler_deferred_task_start(&thread->context.timeout.wakeup_task);
+    spinlock_unlock(thread->context.wait.wait_queue_lock);
     break;
 
   default:
@@ -232,11 +264,8 @@ static void thread_blocked_leave(thread_t* thread)
 {
 #ifdef DEBUG
   ATOM_ASSERT(
-    (thread->context.type == THREAD_CONTEXT_WAIT) ||
-    (thread->context.type == THREAD_CONTEXT_WAIT_ON_QUEUE) ||
-    (thread->context.type == THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT) ||
-    (thread->context.type == THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM),
-    "The current thread context must be a THREAD_CONTEXT_WAIT or THREAD_CONTEXT_WAIT_ON_QUEUE or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM"
+    is_blocked_thread_context(thread->context.type),
+    "The current thread context must be a THREAD_CONTEXT_WAIT or THREAD_CONTEXT_WAIT_WITH_TIMEOUT or THREAD_CONTEXT_WAIT_ON_QUEUE or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM or THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT"
   );
 #endif
 
@@ -244,31 +273,44 @@ static void thread_blocked_leave(thread_t* thread)
   {
   case THREAD_CONTEXT_WAIT:
     break;
+  case THREAD_CONTEXT_WAIT_WITH_TIMEOUT:
+    scheduler_deferred_task_cancel(&thread->context.timeout.wakeup_task);
+    break;
   case THREAD_CONTEXT_WAIT_ON_QUEUE:
-    WITH_SPINLOCK(thread->context.wait_on_queue.wait_queue_lock)
+    WITH_SPINLOCK(thread->context.wait.wait_queue_lock)
     {
-      if (list_contains(thread->context.wait_on_queue.wait_queue, &thread->scheduler_node))
+      if (list_contains(thread->context.wait.wait_queue, &thread->scheduler_node))
       {
-        list_remove(thread->context.wait_on_queue.wait_queue, &thread->scheduler_node);
+        list_remove(thread->context.wait.wait_queue, &thread->scheduler_node);
       }
     }
     break;
   case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT:
-    scheduler_deferred_task_cancel(&thread->context.wait_on_queue_with_timeout.wakeup_task);
-    WITH_SPINLOCK(thread->context.wait_on_queue_with_timeout.wait_queue_lock)
+    scheduler_deferred_task_cancel(&thread->context.timeout.wakeup_task);
+    WITH_SPINLOCK(thread->context.wait.wait_queue_lock)
     {
-      if (list_contains(thread->context.wait_on_queue_with_timeout.wait_queue, &thread->scheduler_node))
+      if (list_contains(thread->context.wait.wait_queue, &thread->scheduler_node))
       {
-        list_remove(thread->context.wait_on_queue_with_timeout.wait_queue, &thread->scheduler_node);
+        list_remove(thread->context.wait.wait_queue, &thread->scheduler_node);
       }
     }
     break;
   case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM:
-    WITH_SPINLOCK(thread->context.wait_on_queue_with_custom_param.wait_queue_lock)
+    WITH_SPINLOCK(thread->context.wait.wait_queue_lock)
     {
-      if (list_contains(thread->context.wait_on_queue_with_custom_param.wait_queue, &thread->scheduler_node))
+      if (list_contains(thread->context.wait.wait_queue, &thread->scheduler_node))
       {
-        list_remove(thread->context.wait_on_queue_with_custom_param.wait_queue, &thread->scheduler_node);
+        list_remove(thread->context.wait.wait_queue, &thread->scheduler_node);
+      }
+    }
+    break;
+  case THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT:
+    scheduler_deferred_task_cancel(&thread->context.timeout.wakeup_task);
+    WITH_SPINLOCK(thread->context.wait.wait_queue_lock)
+    {
+      if (list_contains(thread->context.wait.wait_queue, &thread->scheduler_node))
+      {
+        list_remove(thread->context.wait.wait_queue, &thread->scheduler_node);
       }
     }
     break;

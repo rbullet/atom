@@ -38,7 +38,7 @@ void event_flags_set(event_flags_t* event, event_flags_mask_t const flags)
       {
         thread_t* const thread = CONTAINER_OF(list_pop(&event->waiters), thread_t, scheduler_node);
 
-        event_flags_wait_param_t const* const waiter = thread->context.wait_on_queue_with_custom_param.custom_param;
+        event_flags_wait_param_t const* const waiter = thread->context.wait.custom_param;
 
         if (is_condition_met(event, waiter->mask, waiter->mode))
         {
@@ -85,7 +85,7 @@ void event_flags_wait(event_flags_t* event, event_flags_mask_t const mask, event
     }
 
     event_flags_wait_param_t waiter = EVENT_FLAGS_WAIT_PARAM_INITIALIZER(mask, mode);
-    thread_wait_on_queue_with_custom_param_init(&thread->context.wait_on_queue_with_custom_param, &event->waiters, &event->spinlock, &waiter);
+    thread_wait_on_queue_with_custom_param_init(&thread->context, &event->waiters, &event->spinlock, &waiter);
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }

@@ -43,7 +43,9 @@ extern "C" {
  */
 typedef struct
 {
+  /** @cond INTERNAL */
   volatile uint32_t locked;
+  /** @endcond */
 } spinlock_t;
 
 #define SPINLOCK_UNLOCKED 0u

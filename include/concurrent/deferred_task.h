@@ -38,6 +38,8 @@ extern "C" {
  */
 typedef void (*deferred_task_callback_t)(void* arg);
 
+/** @cond INTERNAL */
+
 /**
  * @brief Deferred task lifecycle state.
  */
@@ -50,6 +52,8 @@ typedef enum
   DEFERRED_TASK_CANCELLED  ///< Task was cancelled. This is a terminal state.
 } deferred_task_state_t;
 
+/** @endcond */
+
 /**
  * @brief Deferred task object.
  *
@@ -60,6 +64,7 @@ typedef enum
  */
 typedef struct deferred_task_t
 {
+  /** @cond INTERNAL */
   duration_t initial_delay; ///< Delay before the first execution.
   duration_t period; ///< Period between executions.
   deferred_task_callback_t callback; ///< Callback executed when the task expires.
@@ -69,6 +74,7 @@ typedef struct deferred_task_t
   timestamp_t deadline; ///< Next execution deadline.
   mutex_t mutex; ///< Internal synchronization mutex.
   condition_variable_t completion; ///< Used to wait for task completion or cancellation.
+  /** @endcond */
 } deferred_task_t;
 
 /**

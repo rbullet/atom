@@ -43,6 +43,7 @@ extern "C" {
 #include "rp2040/concurrent/hardware_spinlock.h"
 #include "rp2040/concurrent/interrupts.h"
 #include "rp2040/concurrent/scheduler.h"
+#include "rp2040/concurrent/thread.h"
 
 #ifdef __cplusplus
 }

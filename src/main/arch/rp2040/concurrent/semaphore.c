@@ -17,7 +17,7 @@ void semaphore_acquire(semaphore_t* semaphore)
       return;
     }
 
-    thread_wait_on_queue_context_init(&thread->context.wait_on_queue, &semaphore->waiters, &semaphore->spinlock);
+    thread_wait_on_queue_context_init(&thread->context, &semaphore->waiters, &semaphore->spinlock);
 
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
