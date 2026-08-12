@@ -5,6 +5,7 @@ extern "C" {
 #endif
 
 #include "util/collection/list.h"
+#include "util/time/duration.h"
 #include "concurrent/spinlock.h"
 #include "concurrent/mutex.h"
 
@@ -46,6 +47,7 @@ typedef struct condition_variable_t
   /** @endcond */
 } condition_variable_t;
 
+
 /**
 * @brief Static condition variable initializer.
  *
@@ -60,6 +62,7 @@ typedef struct condition_variable_t
  * @endcode
  */
 #define CONDITION_VARIABLE_INITIALIZER ((condition_variable_t){ .spinlock = SPINLOCK_INITIALIZER, .waiters = LIST_INITIALIZER })
+
 
 /**
  * @brief Wait for a condition.
@@ -101,6 +104,32 @@ typedef struct condition_variable_t
  */
 void condition_variable_wait(condition_variable_t* condition_variable, mutex_t* mutex);
 
+
+/**
+ * @brief Waits for a condition notification with a timeout.
+ *
+ * Releases the specified mutex and blocks the current thread until the
+ * condition variable is notified or the specified duration elapses.
+ * The mutex is reacquired before this function returns.
+ *
+ * The timeout applies only to waiting for the condition variable. If the
+ * wait ends because of a notification or timeout, the function may block
+ * while reacquiring the mutex.
+ *
+ * @param condition_variable Condition variable to wait on.
+ * @param mutex Locked mutex associated with the condition variable.
+ * @param timeout Maximum duration to wait for the condition variable.
+ *
+ * @return true if the thread was notified, false if the condition wait
+ *         timed out.
+ *
+ * @pre mutex must be locked by the calling thread.
+ *
+ * @note Must be called from thread context.
+ */
+bool condition_variable_wait_with_timeout(condition_variable_t* condition_variable, mutex_t* mutex, duration_t timeout);
+
+
 /**
  * @brief Wake one waiting thread.
  *
@@ -122,6 +151,7 @@ void condition_variable_wait(condition_variable_t* condition_variable, mutex_t* 
  */
 void condition_variable_signal(condition_variable_t* condition_variable);
 
+
 /**
  * @brief Wake all waiting threads.
  *
@@ -142,6 +172,7 @@ void condition_variable_signal(condition_variable_t* condition_variable);
  *          supported by the scheduler implementation.
  */
 void condition_variable_broadcast(condition_variable_t* condition_variable);
+
 
 /** @} */ /* end of condition */
 /** @} */ /* end of concurrent */

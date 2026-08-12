@@ -2,7 +2,7 @@
 
 void condition_variable_wait(condition_variable_t* const condition_variable, mutex_t* const mutex)
 {
-  thread_t* const thread = thread_current();
+  thread_t* const current = thread_current();
 
   WITH_INTERRUPTS_DISABLED
   {
@@ -10,13 +10,37 @@ void condition_variable_wait(condition_variable_t* const condition_variable, mut
 
     mutex_unlock(mutex);
 
-    thread_context_wait_on_queue_init(&thread->context, &condition_variable->waiters, &condition_variable->spinlock);
+    thread_context_wait_on_queue_init(&current->context, &condition_variable->waiters, &condition_variable->spinlock);
 
-    scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
+    scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
   }
 
   mutex_lock(mutex);
 }
+
+
+bool condition_variable_wait_with_timeout(condition_variable_t* const condition_variable, mutex_t* const mutex, duration_t const timeout)
+{
+  thread_t* const current = thread_current();
+
+  WITH_INTERRUPTS_DISABLED
+  {
+    spinlock_lock(&condition_variable->spinlock);
+
+    mutex_unlock(mutex);
+
+    thread_context_wait_on_queue_with_timeout_init(&current->context, &condition_variable->waiters, &condition_variable->spinlock, timeout);
+
+    scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
+  }
+
+  bool const timed_out = current->context.timeout.timed_out;
+
+  mutex_lock(mutex);
+
+  return !timed_out;
+}
+
 
 void condition_variable_signal(condition_variable_t* const condition_variable)
 {

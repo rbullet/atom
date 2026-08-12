@@ -71,7 +71,7 @@ void thread_join(thread_t* thread, void** retval)
   }
 }
 
-bool thread_join_with_timeout(thread_t* thread, void** retval, duration_t timeout)
+bool thread_join_with_timeout(thread_t* thread, void** retval, duration_t const timeout)
 {
   thread_t* const current = thread_current();
   WITH_INTERRUPTS_DISABLED
