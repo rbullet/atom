@@ -36,6 +36,7 @@ extern "C" {
  */
 typedef uint32_t event_flags_mask_t;
 
+
 /**
  * @brief Event flags object.
  *
@@ -50,6 +51,7 @@ typedef struct
   list_t waiters;
   /** @endcond */
 } event_flags_t;
+
 
 /**
  * @brief Event flags wait condition mode.
@@ -67,12 +69,14 @@ typedef enum
   EVENT_FLAGS_ALL_SET
 } event_flags_mode_t;
 
+
 /**
  * @brief Initializes an event flags object.
  *
  * The object can be statically initialized using this macro.
  */
 #define EVENT_FLAGS_INITIALIZER ((event_flags_t){ .spinlock = SPINLOCK_INITIALIZER, .flags = 0, .waiters = LIST_INITIALIZER })
+
 
 /**
  * @brief Sets one or more event flags.
@@ -85,6 +89,7 @@ typedef enum
  */
 void event_flags_set(event_flags_t* event, event_flags_mask_t flags);
 
+
 /**
  * @brief Clears one or more event flags.
  *
@@ -94,6 +99,7 @@ void event_flags_set(event_flags_t* event, event_flags_mask_t flags);
  * @param flags Flags to clear.
  */
 void event_flags_clear(event_flags_t* event, event_flags_mask_t flags);
+
 
 /**
  * @brief Waits until an event condition is satisfied.
@@ -108,6 +114,25 @@ void event_flags_clear(event_flags_t* event, event_flags_mask_t flags);
  */
 void event_flags_wait(event_flags_t* event, event_flags_mask_t mask, event_flags_mode_t mode);
 
+
+/**
+ * @brief Waits for event flags with a timeout.
+ *
+ * Blocks the current thread until the specified event flags condition is
+ * satisfied or the timeout expires.
+ *
+ * @param event Event flags to wait on.
+ * @param mask Flags to test.
+ * @param mode Condition mode used to test the flags.
+ * @param timeout Maximum duration to wait for the condition.
+ *
+ * @return true if the condition was satisfied, false if the timeout expired.
+ *
+ * @note Must be called from thread context.
+ */
+bool event_flags_wait_with_timeout(event_flags_t* event, event_flags_mask_t mask, event_flags_mode_t mode, duration_t timeout);
+
+
 /**
  * @brief Tests an event condition without blocking.
  *
@@ -118,6 +143,7 @@ void event_flags_wait(event_flags_t* event, event_flags_mask_t mask, event_flags
  * @return true if the condition is satisfied, false otherwise.
  */
 bool event_flags_try_wait(event_flags_t* event, event_flags_mask_t mask, event_flags_mode_t mode);
+
 
 /** @} */
 /** @} */
