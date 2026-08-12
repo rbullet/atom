@@ -140,15 +140,13 @@ static void thread_wakeup_callback(void* arg)
   {
     WITH_SPINLOCK(&thread->state_lock)
     {
-      if (thread->state == THREAD_SLEEPING)
+      if (thread->context.timeout.wakeup_state == THREAD_WAKEUP_PENDING)
       {
-        thread->context.timeout.timed_out = true;
-        wakeup = true;
-      }
-      else if (thread->state == THREAD_BLOCKED && thread_context_has_timeout(&thread->context))
-      {
-        thread->context.timeout.timed_out = true;
-        wakeup = true;
+        if (thread->state == THREAD_SLEEPING || thread->state == THREAD_BLOCKED)
+        {
+          thread->context.timeout.wakeup_state = THREAD_WAKEUP_TIMED_OUT;
+          wakeup = true;
+        }
       }
     }
   }
@@ -182,8 +180,6 @@ static thread_state_transition_result_t thread_blocked_activate(thread_t* thread
   {
     thread->context.timeout.wakeup_task.callback = thread_wakeup_callback;
     thread->context.timeout.wakeup_task.arg = thread;
-    thread->context.timeout.timed_out = false;
-
     scheduler_deferred_task_start(&thread->context.timeout.wakeup_task);
   }
 
@@ -199,6 +195,10 @@ static void thread_blocked_leave(thread_t* thread)
 {
   if (thread_context_has_timeout(&thread->context))
   {
+    if (thread->context.timeout.wakeup_state == THREAD_WAKEUP_PENDING)
+    {
+      thread->context.timeout.wakeup_state = THREAD_WAKEUP_AWOKEN;
+    }
     scheduler_deferred_task_cancel(&thread->context.timeout.wakeup_task);
   }
 

@@ -34,11 +34,9 @@ bool condition_variable_wait_with_timeout(condition_variable_t* const condition_
     scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
   }
 
-  bool const timed_out = current->context.timeout.timed_out;
-
   mutex_lock(mutex);
 
-  return !timed_out;
+  return current->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
 }
 
 

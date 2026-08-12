@@ -129,6 +129,21 @@ void mutex_lock(mutex_t* mutex);
 
 
 /**
+ * @brief Attempts to acquire a mutex within a timeout.
+ *
+ * Blocks until the mutex is acquired or the specified timeout expires.
+ *
+ * @param mutex Mutex to acquire.
+ * @param timeout Maximum duration to wait for the mutex.
+ *
+ * @return true if the mutex was acquired, false if the timeout expired.
+ *
+ * @pre Must be called from thread context.
+ */
+bool mutex_lock_with_timeout(mutex_t* mutex, duration_t timeout);
+
+
+/**
  * @brief Releases a mutex.
  *
  * Decrements the recursive ownership depth.

@@ -54,11 +54,18 @@ typedef enum
 
 /** @cond INTERNAL */
 
+typedef enum
+{
+  THREAD_WAKEUP_NONE,
+  THREAD_WAKEUP_PENDING,
+  THREAD_WAKEUP_AWOKEN,
+  THREAD_WAKEUP_TIMED_OUT
+} thread_wakeup_state_t;
+
 typedef struct
 {
   deferred_task_t wakeup_task;
-  bool active;
-  bool timed_out;
+  thread_wakeup_state_t wakeup_state;
 } thread_context_timeout_t;
 
 typedef struct

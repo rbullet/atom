@@ -26,6 +26,32 @@ void mutex_lock(mutex_t* mutex)
   }
 }
 
+bool mutex_lock_with_timeout(mutex_t* mutex, duration_t timeout)
+{
+  thread_t* const thread = thread_current();
+  WITH_INTERRUPTS_DISABLED
+  {
+    spinlock_lock(&mutex->spinlock);
+    if (mutex->owner == thread)
+    {
+      mutex->count++;
+      spinlock_unlock(&mutex->spinlock);
+      return true;
+    }
+    if (mutex->owner == NULL)
+    {
+      mutex->owner = thread;
+      mutex->count = 1;
+      spinlock_unlock(&mutex->spinlock);
+      return true;
+    }
+    thread_context_wait_on_queue_with_timeout_init(&thread->context, &mutex->waiters, &mutex->spinlock, timeout);
+    scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
+  }
+
+  return thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
+}
+
 bool mutex_try_lock(mutex_t* mutex)
 {
   thread_t* const thread = thread_current();
@@ -53,6 +79,7 @@ bool mutex_try_lock(mutex_t* mutex)
 void mutex_unlock(mutex_t* mutex)
 {
   thread_t const* const thread = thread_current();
+
   WITH_INTERRUPTS_DISABLED
   {
     spinlock_lock(&mutex->spinlock);
@@ -69,23 +96,42 @@ void mutex_unlock(mutex_t* mutex)
       return;
     }
 
-    thread_t* waiter = NULL;
-    if (!list_is_empty(&mutex->waiters))
+    while (!list_is_empty(&mutex->waiters))
     {
-      waiter = CONTAINER_OF(mutex->waiters.head, thread_t, scheduler_node);
-      mutex->owner = waiter;
-      mutex->count = 1;
+      thread_t* const waiter = CONTAINER_OF(mutex->waiters.head, thread_t, scheduler_node);
+
+      spinlock_unlock(&mutex->spinlock);
+
+      bool awoken = false;
+
+      WITH_SPINLOCK(&waiter->state_lock)
+      {
+        if (waiter->context.timeout.wakeup_state != THREAD_WAKEUP_TIMED_OUT)
+        {
+          awoken = true;
+          if (thread_context_has_timeout(&waiter->context))
+          {
+            waiter->context.timeout.wakeup_state = THREAD_WAKEUP_AWOKEN;
+          }
+        }
+      }
+
+      spinlock_lock(&mutex->spinlock);
+
+      if (awoken)
+      {
+        mutex->owner = waiter;
+        mutex->count = 1;
+
+        spinlock_unlock(&mutex->spinlock);
+
+        scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
+        return;
+      }
     }
-    else
-    {
-      mutex->owner = NULL;
-    }
+
+    mutex->owner = NULL;
 
     spinlock_unlock(&mutex->spinlock);
-
-    if (waiter != NULL)
-    {
-      scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
-    }
   }
 }

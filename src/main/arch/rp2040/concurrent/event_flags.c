@@ -108,7 +108,7 @@ bool event_flags_wait_with_timeout(event_flags_t* event, event_flags_mask_t cons
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
 
-  return !thread->context.timeout.timed_out;
+  return thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
 }
 
 bool event_flags_try_wait(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode)

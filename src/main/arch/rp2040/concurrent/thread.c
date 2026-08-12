@@ -32,7 +32,7 @@ bool thread_wait_with_timeout(duration_t const timeout)
   thread_t* thread = thread_current();
   thread_context_wait_with_timeout_init(&thread->context, timeout);
   scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
-  return !thread->context.timeout.timed_out;
+  return thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
 }
 
 void thread_notify(thread_t* thread)
@@ -92,10 +92,10 @@ bool thread_join_with_timeout(thread_t* thread, void** retval, duration_t const 
     spinlock_unlock(&thread->state_lock);
     scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
   }
-  bool const timed_out = current->context.timeout.timed_out;
-  if (!timed_out && retval)
+  bool const awoken = current->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
+  if (awoken && retval)
   {
     *retval = thread->context.retval;
   }
-  return !timed_out;
+  return awoken;
 }
