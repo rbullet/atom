@@ -1,0 +1,15 @@
+{
+  "version": 6,
+  "configurePresets": [
+    {
+      "name": "atom",
+      "displayName": "atom",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/cmake-build-atom",
+      "toolchainFile": "${sourceDir}/arm-none-eabi-toolchain.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
+      }
+    }
+  ]
+}
