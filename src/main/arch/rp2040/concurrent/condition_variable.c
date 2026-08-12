@@ -10,7 +10,7 @@ void condition_variable_wait(condition_variable_t* const condition_variable, mut
 
     mutex_unlock(mutex);
 
-    thread_wait_on_queue_context_init(&thread->context, &condition_variable->waiters, &condition_variable->spinlock);
+    thread_context_wait_on_queue_init(&thread->context, &condition_variable->waiters, &condition_variable->spinlock);
 
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }

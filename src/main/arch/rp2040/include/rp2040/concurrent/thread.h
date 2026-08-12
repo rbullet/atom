@@ -5,8 +5,21 @@ extern "C" {
 
 #include "concurrent/thread.h"
 
+static inline void thread_context_init(thread_context_t* context)
+{
+  context->wait.wait_queue = NULL;
+  context->wait.wait_queue_lock = NULL;
+  context->wait.custom_param = NULL;
+
+  context->timeout.active = false;
+  context->timeout.timed_out = false;
+}
+
 static inline void thread_context_wait_queue_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, void* custom_param)
 {
+#ifdef DEBUG
+  ATOM_ASSERT(wait_queue != NULL && wait_queue_lock != NULL,"Wait queue and lock must not be NULL");
+#endif
   context->wait.wait_queue = wait_queue;
   context->wait.wait_queue_lock = wait_queue_lock;
   context->wait.custom_param = custom_param;
@@ -19,56 +32,67 @@ static inline void thread_context_timeout_init(thread_context_t* context, durati
   context->timeout.wakeup_task.completion = CONDITION_VARIABLE_INITIALIZER;
   context->timeout.wakeup_task.initial_delay = timeout_duration;
   context->timeout.wakeup_task.period = duration_of(0, MILLISECONDS);
+  context->timeout.active = true;
   context->timeout.timed_out = false;
 }
 
-static inline void thread_sleep_context_init(thread_context_t* context, duration_t const timeout)
+static inline void thread_context_sleep_init(thread_context_t* context, duration_t const timeout)
 {
-  context->type = THREAD_CONTEXT_SLEEP;
+  thread_context_init(context);
   thread_context_timeout_init(context, timeout);
 }
 
-static inline void thread_wait_init(thread_context_t* context)
+static inline void thread_context_wait_init(thread_context_t* context)
 {
-  context->type = THREAD_CONTEXT_WAIT;
+  thread_context_init(context);
 }
 
-static inline void thread_wait_with_timeout_context_init(thread_context_t* context, duration_t const timeout)
+static inline void thread_context_wait_with_timeout_init(thread_context_t* context, duration_t const timeout)
 {
-  context->type = THREAD_CONTEXT_WAIT_WITH_TIMEOUT;
+  thread_context_init(context);
   thread_context_timeout_init(context, timeout);
 }
 
-static inline void thread_wait_on_queue_context_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock)
+static inline void thread_context_wait_on_queue_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock)
 {
-  context->type = THREAD_CONTEXT_WAIT_ON_QUEUE;
+  thread_context_init(context);
   thread_context_wait_queue_init(context, wait_queue, wait_queue_lock, NULL);
 }
 
-static inline void thread_wait_on_queue_with_timeout_context_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, duration_t const timeout)
+static inline void thread_context_wait_on_queue_with_timeout_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, duration_t const timeout)
 {
-  context->type = THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT;
+  thread_context_init(context);
   thread_context_wait_queue_init(context, wait_queue, wait_queue_lock, NULL);
   thread_context_timeout_init(context, timeout);
 }
 
-static inline void thread_wait_on_queue_with_custom_param_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, void* custom_param)
+static inline void thread_context_wait_on_queue_with_custom_param_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, void* custom_param)
 {
-  context->type = THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM;
+  thread_context_init(context);
   thread_context_wait_queue_init(context, wait_queue, wait_queue_lock, custom_param);
 }
 
-static inline void thread_wait_on_queue_with_custom_param_and_timeout_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, void* custom_param, duration_t const timeout)
+static inline void thread_context_wait_on_queue_with_custom_param_and_timeout_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, void* custom_param, duration_t const timeout)
 {
-  context->type = THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT;
+  thread_context_init(context);
   thread_context_timeout_init(context, timeout);
   thread_context_wait_queue_init(context, wait_queue, wait_queue_lock, custom_param);
 }
 
-static inline void thread_terminated_context_init(thread_context_t* context, void* retval)
+static inline void thread_context_terminated_init(thread_context_t* context, void* retval)
 {
-  context->type = THREAD_CONTEXT_TERMINATED;
+  thread_context_init(context);
   context->retval = retval;
+}
+
+static inline bool thread_context_has_timeout(thread_context_t const* context)
+{
+  return context->timeout.active;
+}
+
+static inline bool thread_context_has_queue(thread_context_t const* context)
+{
+  return context->wait.wait_queue != NULL;
 }
 
 #ifdef __cplusplus

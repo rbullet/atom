@@ -54,28 +54,15 @@ typedef enum
 
 /** @cond INTERNAL */
 
-typedef enum
-{
-  THREAD_CONTEXT_NONE = 0,
-  THREAD_CONTEXT_SLEEP,
-  THREAD_CONTEXT_WAIT,
-  THREAD_CONTEXT_WAIT_WITH_TIMEOUT,
-  THREAD_CONTEXT_WAIT_ON_QUEUE,
-  THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_TIMEOUT,
-  THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM,
-  THREAD_CONTEXT_WAIT_ON_QUEUE_WITH_CUSTOM_PARAM_AND_TIMEOUT,
-  THREAD_CONTEXT_TERMINATED,
-} thread_context_type_t;
-
 typedef struct
 {
   deferred_task_t wakeup_task;
+  bool active;
   bool timed_out;
 } thread_context_timeout_t;
 
 typedef struct
 {
-  thread_context_type_t type;
   union
   {
     struct

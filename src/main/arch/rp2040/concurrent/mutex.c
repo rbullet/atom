@@ -21,7 +21,7 @@ void mutex_lock(mutex_t* mutex)
       spinlock_unlock(&mutex->spinlock);
       return;
     }
-    thread_wait_on_queue_context_init(&thread->context, &mutex->waiters, &mutex->spinlock);
+    thread_context_wait_on_queue_init(&thread->context, &mutex->waiters, &mutex->spinlock);
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
 }

@@ -34,7 +34,7 @@ void scheduler_thread_exit(void* retval)
   {
     WITH_SPINLOCK(&thread->state_lock)
     {
-      thread_terminated_context_init(&thread->context, retval);
+      thread_context_terminated_init(&thread->context, retval);
     }
   }
   scheduler_state_machine_process_event(thread, THREAD_EVENT_TERMINATE);
@@ -64,7 +64,6 @@ static void scheduler_thread_init_common(thread_t* const thread, uint32_t* const
   thread->scheduler_node = LIST_NODE_INITIALIZER;
   thread->waiters = LIST_INITIALIZER;
   thread->waiters_spinlock = SPINLOCK_INITIALIZER;
-  thread->context.type = THREAD_CONTEXT_NONE;
 }
 
 static void scheduler_thread_init_bootstrap(thread_t* thread, uint32_t* stack_base, size_t const stack_size)
