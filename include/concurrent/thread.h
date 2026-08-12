@@ -209,7 +209,7 @@ void thread_wait(void);
  * @param timeout Maximum duration to wait.
  * @return true if the thread was notified, or false if the timeout expired.
  */
-bool thread_wait_until(duration_t timeout);
+bool thread_wait_with_timeout(duration_t timeout);
 
 
 /**
@@ -233,14 +233,32 @@ void thread_notify(thread_t* thread);
  * @param retval Optional pointer to store the thread's return value.
  *               May be NULL if the return value is not needed.
  *
- * @return true if the thread terminated successfully, false otherwise.
+ * @pre thread must not be the current thread.
+ *
+ * @note Must be called from thread context.
+ */
+void thread_join(thread_t* thread, void** retval);
+
+
+/**
+ * @brief Waits for thread completion with a timeout.
+ *
+ * Blocks until the specified thread terminates or the specified duration
+ * elapses.
+ *
+ * @param thread Thread to join.
+ * @param retval Optional pointer to store the thread's return value.
+ *              May be NULL if the return value is not needed.
+ * @param timeout Maximum duration to wait.
+ *
+ * @return true if the thread terminated before the timeout, false if the
+ *         timeout expired.
  *
  * @pre thread must not be the current thread.
  *
  * @note Must be called from thread context.
  */
-bool thread_join(thread_t* thread, void** retval);
-
+bool thread_join_with_timeout(thread_t* thread, void** retval, duration_t timeout);
 
 /** @} */
 /** @} */
