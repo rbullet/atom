@@ -52,7 +52,6 @@ typedef struct semaphore_t
 } semaphore_t;
 
 
-
 /**
 * @brief Statically initializes a semaphore.
  *
@@ -73,6 +72,7 @@ typedef struct semaphore_t
     .waiters = LIST_INITIALIZER       \
   })
 
+
 /**
  * @brief Acquires a semaphore permit.
  *
@@ -85,6 +85,22 @@ typedef struct semaphore_t
  */
 void semaphore_acquire(semaphore_t* semaphore);
 
+
+/**
+ * @brief Attempts to acquire a semaphore within a timeout.
+ *
+ * Blocks until a permit becomes available or the specified timeout expires.
+ *
+ * @param semaphore Semaphore to acquire.
+ * @param timeout Maximum duration to wait for a permit.
+ *
+ * @return true if a permit was acquired, false if the timeout expired.
+ *
+ * @pre Must be called from thread context.
+ */
+bool semaphore_acquire_with_timeout(semaphore_t* semaphore, duration_t timeout);
+
+
 /**
  * @brief Attempts to acquire a semaphore permit without blocking.
  *
@@ -96,6 +112,7 @@ void semaphore_acquire(semaphore_t* semaphore);
  * @return true if a permit was acquired, false otherwise.
  */
 bool semaphore_try_acquire(semaphore_t* semaphore);
+
 
 /**
  * @brief Releases a semaphore permit.
@@ -111,6 +128,7 @@ bool semaphore_try_acquire(semaphore_t* semaphore);
  */
 void semaphore_release(semaphore_t* semaphore);
 
+
 /**
  * @brief Returns the current number of available permits.
  *
@@ -119,6 +137,7 @@ void semaphore_release(semaphore_t* semaphore);
  * @return Snapshot of the current permit count.
  */
 uint32_t semaphore_count(semaphore_t const* semaphore);
+
 
 /**
  * @cond INTERNAL
@@ -148,6 +167,7 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * including when exiting via `return`.
  */
 #define WITH_SEMAPHORE(semaphore) _WITH_SEMAPHORE_BLOCK_WITH_ID(semaphore, __COUNTER__)
+
 
 /** @} */
 
