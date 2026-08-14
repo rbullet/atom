@@ -108,6 +108,7 @@ extern "C" {
 
 #include "util/collection/list.h"
 #include "util/collection/sorted_list.h"
+#include "util/collection/ring_buffer.h"
 
 /** @} */
 

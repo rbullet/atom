@@ -18,6 +18,7 @@ target_sources(atom PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/util/log.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/util/duration.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/util/collection/sorted_list.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/util/collection/ring_buffer.c"
 )
 
 # ------------------------------------------------------------------------------
