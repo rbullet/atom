@@ -1,6 +1,6 @@
 #include "rp2040/atom.h"
 
-void condition_variable_wait(condition_variable_t* const condition_variable, mutex_t* const mutex)
+static bool condition_variable_wait_internal(condition_variable_t* const condition_variable, mutex_t* const mutex, duration_t const* const timeout)
 {
   thread_t* const current = thread_current();
 
@@ -10,35 +10,32 @@ void condition_variable_wait(condition_variable_t* const condition_variable, mut
 
     mutex_unlock(mutex);
 
-    thread_context_wait_on_queue_init(&current->context, &condition_variable->waiters, &condition_variable->spinlock);
+    if (timeout == NULL)
+    {
+      thread_context_wait_on_queue_init(&current->context, &condition_variable->waiters, &condition_variable->spinlock);
+    }
+    else
+    {
+      thread_context_wait_on_queue_with_timeout_init(&current->context, &condition_variable->waiters, &condition_variable->spinlock, *timeout);
+    }
 
     scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
   }
 
   mutex_lock(mutex);
+
+  return (timeout == NULL) || (current->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN);
 }
 
+void condition_variable_wait(condition_variable_t* const condition_variable, mutex_t* const mutex)
+{
+  condition_variable_wait_internal(condition_variable, mutex, NULL);
+}
 
 bool condition_variable_wait_with_timeout(condition_variable_t* const condition_variable, mutex_t* const mutex, duration_t const timeout)
 {
-  thread_t* const current = thread_current();
-
-  WITH_INTERRUPTS_DISABLED
-  {
-    spinlock_lock(&condition_variable->spinlock);
-
-    mutex_unlock(mutex);
-
-    thread_context_wait_on_queue_with_timeout_init(&current->context, &condition_variable->waiters, &condition_variable->spinlock, timeout);
-
-    scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
-  }
-
-  mutex_lock(mutex);
-
-  return current->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
+  return condition_variable_wait_internal(condition_variable, mutex, &timeout);
 }
-
 
 void condition_variable_signal(condition_variable_t* const condition_variable)
 {
