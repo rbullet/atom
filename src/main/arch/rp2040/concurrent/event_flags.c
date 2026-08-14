@@ -71,32 +71,14 @@ void event_flags_clear(event_flags_t* event, event_flags_mask_t const flags)
   }
 }
 
-void event_flags_wait(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode)
+static bool event_flags_wait_internal(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode, duration_t const* const timeout)
 {
   thread_t* const thread = thread_current();
 
   WITH_INTERRUPTS_DISABLED
   {
     spinlock_lock(&event->spinlock);
-    if (is_condition_met(event, mask, mode))
-    {
-      spinlock_unlock(&event->spinlock);
-      return;
-    }
 
-    event_flags_wait_param_t waiter = EVENT_FLAGS_WAIT_PARAM_INITIALIZER(mask, mode);
-    thread_context_wait_on_queue_with_custom_param_init(&thread->context, &event->waiters, &event->spinlock, &waiter);
-    scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
-  }
-}
-
-bool event_flags_wait_with_timeout(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode, duration_t const timeout)
-{
-  thread_t* const thread = thread_current();
-
-  WITH_INTERRUPTS_DISABLED
-  {
-    spinlock_lock(&event->spinlock);
     if (is_condition_met(event, mask, mode))
     {
       spinlock_unlock(&event->spinlock);
@@ -104,11 +86,30 @@ bool event_flags_wait_with_timeout(event_flags_t* event, event_flags_mask_t cons
     }
 
     event_flags_wait_param_t waiter = EVENT_FLAGS_WAIT_PARAM_INITIALIZER(mask, mode);
-    thread_context_wait_on_queue_with_custom_param_and_timeout_init(&thread->context, &event->waiters, &event->spinlock, &waiter, timeout);
+
+    if (timeout == NULL)
+    {
+      thread_context_wait_on_queue_with_custom_param_init(&thread->context, &event->waiters, &event->spinlock, &waiter);
+    }
+    else
+    {
+      thread_context_wait_on_queue_with_custom_param_and_timeout_init(&thread->context, &event->waiters, &event->spinlock, &waiter, *timeout);
+    }
+
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
 
-  return thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
+  return (timeout == NULL) || (thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN);
+}
+
+void event_flags_wait(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode)
+{
+  event_flags_wait_internal(event, mask, mode, NULL);
+}
+
+bool event_flags_wait_with_timeout(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode, duration_t const timeout)
+{
+  return event_flags_wait_internal(event, mask, mode, &timeout);
 }
 
 bool event_flags_try_wait(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode)
