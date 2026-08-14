@@ -2,28 +2,7 @@
 
 #include "rp2040/atom.h"
 
-void semaphore_acquire(semaphore_t* semaphore)
-{
-  thread_t* const thread = thread_current();
-
-  WITH_INTERRUPTS_DISABLED
-  {
-    spinlock_lock(&semaphore->spinlock);
-
-    if (semaphore->permits > 0)
-    {
-      semaphore->permits--;
-      spinlock_unlock(&semaphore->spinlock);
-      return;
-    }
-
-    thread_context_wait_on_queue_init(&thread->context, &semaphore->waiters, &semaphore->spinlock);
-
-    scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
-  }
-}
-
-bool semaphore_acquire_with_timeout(semaphore_t* semaphore, duration_t const timeout)
+static bool semaphore_acquire_internal(semaphore_t* semaphore, duration_t const* const timeout)
 {
   thread_t* const thread = thread_current();
 
@@ -38,12 +17,29 @@ bool semaphore_acquire_with_timeout(semaphore_t* semaphore, duration_t const tim
       return true;
     }
 
-    thread_context_wait_on_queue_with_timeout_init(&thread->context, &semaphore->waiters, &semaphore->spinlock, timeout);
+    if (timeout == NULL)
+    {
+      thread_context_wait_on_queue_init(&thread->context, &semaphore->waiters, &semaphore->spinlock);
+    }
+    else
+    {
+      thread_context_wait_on_queue_with_timeout_init(&thread->context, &semaphore->waiters, &semaphore->spinlock, *timeout);
+    }
 
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
 
-  return thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
+  return (timeout == NULL) || (thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN);
+}
+
+void semaphore_acquire(semaphore_t* semaphore)
+{
+  semaphore_acquire_internal(semaphore, NULL);
+}
+
+bool semaphore_acquire_with_timeout(semaphore_t* semaphore, duration_t const timeout)
+{
+  return semaphore_acquire_internal(semaphore, &timeout);
 }
 
 bool semaphore_try_acquire(semaphore_t* semaphore)
