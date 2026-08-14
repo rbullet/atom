@@ -149,7 +149,7 @@ bool mutex_lock_with_timeout(mutex_t* mutex, duration_t timeout);
  * Decrements the recursive ownership depth.
  *
  * The mutex is released only when the ownership depth reaches zero.
- * At that point, one waiting thread is resumed, if any.
+ * At that point, one waiting thread is resumed,                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   if any.
  *
  * Resuming a thread does not transfer ownership of the mutex. The
  * resumed thread competes normally with other runnable threads to
