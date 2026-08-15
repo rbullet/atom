@@ -75,7 +75,7 @@ void semaphore_release(semaphore_t* semaphore)
 
       WITH_SPINLOCK(&waiter->state_lock)
       {
-        if (waiter->context.timeout.wakeup_state != THREAD_WAKEUP_TIMED_OUT)
+        if (waiter->context.timeout.wakeup_state != THREAD_WAKEUP_TIMED_OUT && waiter->context.timeout.wakeup_state != THREAD_WAKEUP_AWOKEN)
         {
           awoken = true;
 
