@@ -104,10 +104,7 @@ void mutex_unlock(mutex_t* mutex)
         if (waiter->context.timeout.wakeup_state != THREAD_WAKEUP_TIMED_OUT && waiter->context.timeout.wakeup_state != THREAD_WAKEUP_AWOKEN)
         {
           awoken = true;
-          if (thread_context_has_timeout(&waiter->context))
-          {
-            waiter->context.timeout.wakeup_state = THREAD_WAKEUP_AWOKEN;
-          }
+          waiter->context.timeout.wakeup_state = THREAD_WAKEUP_AWOKEN;
         }
       }
 

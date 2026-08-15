@@ -11,6 +11,7 @@ static inline void thread_context_init(thread_context_t* context)
   context->wait.wait_queue_lock = NULL;
   context->wait.custom_param = NULL;
   context->timeout.wakeup_state = THREAD_WAKEUP_NONE;
+  context->timeout.has_timeout = false;
 }
 
 static inline void thread_context_wait_queue_init(thread_context_t* context, list_t* wait_queue, spinlock_t* wait_queue_lock, void* custom_param)
@@ -31,6 +32,7 @@ static inline void thread_context_timeout_init(thread_context_t* context, durati
   context->timeout.wakeup_task.initial_delay = timeout_duration;
   context->timeout.wakeup_task.period = duration_of(0, MILLISECONDS);
   context->timeout.wakeup_state = THREAD_WAKEUP_PENDING;
+  context->timeout.has_timeout = true;
 }
 
 static inline void thread_context_sleep_init(thread_context_t* context, duration_t const timeout)
@@ -80,11 +82,6 @@ static inline void thread_context_terminated_init(thread_context_t* context, voi
 {
   thread_context_init(context);
   context->retval = retval;
-}
-
-static inline bool thread_context_has_timeout(thread_context_t const* context)
-{
-  return context->timeout.wakeup_state != THREAD_WAKEUP_NONE;
 }
 
 static inline bool thread_context_has_queue(thread_context_t const* context)

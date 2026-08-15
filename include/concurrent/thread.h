@@ -4,6 +4,7 @@
 extern "C" {
 #endif
 
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
@@ -66,6 +67,7 @@ typedef struct
 {
   deferred_task_t wakeup_task;
   thread_wakeup_state_t wakeup_state;
+  bool has_timeout;          ///< True if this wait was initialized with a timeout.
 } thread_context_timeout_t;
 
 typedef struct

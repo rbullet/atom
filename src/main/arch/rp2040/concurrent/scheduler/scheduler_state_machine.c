@@ -176,7 +176,7 @@ static thread_state_transition_result_t thread_blocked_activate(thread_t* thread
     list_push(thread->context.wait.wait_queue, &thread->scheduler_node);
   }
 
-  if (thread_context_has_timeout(&thread->context))
+  if (thread->context.timeout.has_timeout)
   {
     thread->context.timeout.wakeup_task.callback = thread_wakeup_callback;
     thread->context.timeout.wakeup_task.arg = thread;
@@ -193,7 +193,7 @@ static thread_state_transition_result_t thread_blocked_activate(thread_t* thread
 
 static void thread_blocked_leave(thread_t* thread)
 {
-  if (thread_context_has_timeout(&thread->context))
+  if (thread->context.timeout.has_timeout)
   {
     if (thread->context.timeout.wakeup_state == THREAD_WAKEUP_PENDING)
     {
