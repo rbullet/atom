@@ -42,21 +42,15 @@ void* __attribute__((noreturn)) scheduler_deferred_task_worker(void* const arg)
     {
       deferred_task_t* const deferred_task = CONTAINER_OF(list_pop(&expired_tasks), deferred_task_t, scheduler_node);
 
-      bool should_run = false;
       WITH_MUTEX(&deferred_task->mutex)
         {
-          if (deferred_task->state == DEFERRED_TASK_SCHEDULED)
+          if (deferred_task->state != DEFERRED_TASK_SCHEDULED)
           {
-            deferred_task->state = DEFERRED_TASK_RUNNING;
-            should_run = true;
+            continue;
           }
+          deferred_task->state = DEFERRED_TASK_RUNNING;
         }
       WITH_MUTEX_END
-
-      if (!should_run)
-      {
-        continue;
-      }
 
       deferred_task->callback(deferred_task->arg);
       WITH_MUTEX(&deferred_task->mutex)
