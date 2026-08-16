@@ -106,7 +106,9 @@ bool scheduler_state_machine_process_event(thread_t* thread, thread_event_t cons
         activate_result = thread_states[next_state].activate(thread);
       }
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
   if (activate_result == REQUIRES_EXTRA_CONTEXT_SWITCH && scheduler_thread_current() == thread)
   {
     scheduler_yield();
@@ -126,7 +128,9 @@ static thread_state_transition_result_t thread_ready_activate(thread_t* thread)
       {
         list_push(&execution_context[CPUID].ready_queue, &thread->scheduler_node);
       }
+      WITH_SPINLOCK_END
     }
+    WITH_INTERRUPTS_DISABLED_END
   }
 
   return thread == current ? REQUIRES_EXTRA_CONTEXT_SWITCH : SUCCESS;
@@ -149,7 +153,9 @@ static void thread_wakeup_callback(void* arg)
         }
       }
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
   if (wakeup)
   {
     scheduler_state_machine_process_event(thread, THREAD_EVENT_WAKEUP);
@@ -211,6 +217,7 @@ static void thread_blocked_leave(thread_t* thread)
         list_remove(thread->context.wait.wait_queue, &thread->scheduler_node);
       }
     }
+    WITH_SPINLOCK_END
   }
 }
 
@@ -225,6 +232,7 @@ static thread_state_transition_result_t thread_terminated_activate(thread_t* thr
       list_push(&waiters, list_pop(&thread->waiters));
     }
   }
+  WITH_SPINLOCK_END
 
   while (!list_is_empty(&waiters))
   {

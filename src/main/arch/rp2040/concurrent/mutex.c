@@ -33,6 +33,7 @@ static bool mutex_lock_internal(mutex_t* mutex, duration_t const* const timeout)
 
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
+  WITH_INTERRUPTS_DISABLED_END
 
   return (timeout == NULL) || (thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN);
 }
@@ -67,7 +68,9 @@ bool mutex_try_lock(mutex_t* mutex)
       mutex->owner = thread;
       mutex->count = 1;
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
   return true;
 }
 
@@ -107,6 +110,7 @@ void mutex_unlock(mutex_t* mutex)
           waiter->context.timeout.wakeup_state = THREAD_WAKEUP_AWOKEN;
         }
       }
+      WITH_SPINLOCK_END
 
       spinlock_lock(&mutex->spinlock);
 
@@ -126,4 +130,5 @@ void mutex_unlock(mutex_t* mutex)
 
     spinlock_unlock(&mutex->spinlock);
   }
+  WITH_INTERRUPTS_DISABLED_END
 }

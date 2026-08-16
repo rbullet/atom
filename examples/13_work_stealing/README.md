@@ -22,6 +22,7 @@ WITH_MUTEX(&mutex)
 {
   printf("Annie: Hello from CORE %lu!\r\n", CPUID);
 }
+WITH_MUTEX_END
 ```
 
 This ensures that console output from different processors does not interleave.

@@ -20,6 +20,7 @@ static void* hello_thread_routine(void* arg)
     {
       printf("%s: Hello from CORE %lu!\r\n", firstname, cpu_get_id());
     }
+    WITH_MUTEX_END
   }
   return NULL;
 }

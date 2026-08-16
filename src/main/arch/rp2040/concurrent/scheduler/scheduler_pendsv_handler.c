@@ -22,6 +22,7 @@ void scheduler_yield(void)
     {
       wfi();
     }
+    WITH_INTERRUPTS_ENABLED_END
   }
 }
 
@@ -79,4 +80,3 @@ void __attribute__((naked)) scheduler_pendsv_handler(void)
     "bx      lr                         \n"
   );
 }
-

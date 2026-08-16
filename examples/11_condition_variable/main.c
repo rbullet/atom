@@ -24,6 +24,7 @@ static void* student_routine(void* const arg)
     }
     printf("%s: It's the end of school! I'm going back home!\r\n", student_name);
   }
+  WITH_MUTEX_END
   return NULL;
 }
 
@@ -69,6 +70,7 @@ int main(void)
     school_is_over = true;
     condition_variable_broadcast(&end_of_school);
   }
+  WITH_MUTEX_END
 
   while (1)
   {

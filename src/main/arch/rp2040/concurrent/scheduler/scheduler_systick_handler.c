@@ -17,7 +17,9 @@ static void scheduler_process_deferred_tasks(void)
         }
       }
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
 }
 
 static bool scheduler_should_yield(void)
@@ -30,7 +32,9 @@ static bool scheduler_should_yield(void)
       thread_t const* const current = execution_context[CPUID].current_thread;
       should_yield = current->state != THREAD_RUNNING || current == execution_context[CPUID].idle_thread || scheduler_timestamp_is_expired(current->deadline);
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
   return should_yield;
 }
 

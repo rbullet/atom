@@ -51,6 +51,7 @@ void event_flags_set(event_flags_t* event, event_flags_mask_t const flags)
       }
       event->waiters = waiter_list;
     }
+    WITH_SPINLOCK_END
 
     while (!list_is_empty(&resume_list))
     {
@@ -58,6 +59,7 @@ void event_flags_set(event_flags_t* event, event_flags_mask_t const flags)
       scheduler_state_machine_process_event(thread, THREAD_EVENT_WAKEUP);
     }
   }
+  WITH_INTERRUPTS_DISABLED_END
 }
 
 void event_flags_clear(event_flags_t* event, event_flags_mask_t const flags)
@@ -68,7 +70,9 @@ void event_flags_clear(event_flags_t* event, event_flags_mask_t const flags)
     {
       BITS_CLEAR(event->flags, flags);
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
 }
 
 static bool event_flags_wait_internal(event_flags_t* event, event_flags_mask_t const mask, event_flags_mode_t const mode, duration_t const* const timeout)
@@ -98,6 +102,7 @@ static bool event_flags_wait_internal(event_flags_t* event, event_flags_mask_t c
 
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
+  WITH_INTERRUPTS_DISABLED_END
 
   return (timeout == NULL) || (thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN);
 }
@@ -123,6 +128,8 @@ bool event_flags_try_wait(event_flags_t* event, event_flags_mask_t const mask, e
         return true;
       }
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
   return false;
 }

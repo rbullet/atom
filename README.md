@@ -218,16 +218,19 @@ WITH_MUTEX(&resource_lock)
 {
   update_shared_state();
 }
+WITH_MUTEX_END
 
 WITH_SEMAPHORE(&pool_semaphore)
 {
   use_pooled_resource();
 }
+WITH_SEMAPHORE_END
 
 WITH_INTERRUPTS_DISABLED
 {
   critical_update();
 }
+WITH_INTERRUPTS_DISABLED_END
 ```
 
 This avoids common bugs where an early `return` or exception path forgets to
@@ -242,6 +245,7 @@ WITH_SPINLOCK(lock)
 {
     update_shared_hardware_state();
 }
+WITH_SPINLOCK_END
 ```
 
 The public spinlock API does not expose hardware spinlock registers directly.

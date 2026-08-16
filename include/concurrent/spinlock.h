@@ -125,14 +125,6 @@ static inline void spinlock_auto_unlock(spinlock_t** spinlock)
   spinlock_unlock(*spinlock);
 }
 
-#define _WITH_SPINLOCK_BLOCK_WITH_ID(spinlock, ID)                               \
-for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)   \
-    for (spinlock_t* __attribute__((cleanup(spinlock_auto_unlock)))              \
-        _CAT(_spinlock_guard_, ID) = (spinlock_lock(spinlock), spinlock);        \
-        _CAT(_once_, ID);                                                        \
-        _CAT(_once_, ID) = false                                                 \
-  )
-
 /**
  * @endcond
  */
@@ -155,6 +147,7 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * {
  *     shared_state++;
  * }
+ * WITH_SPINLOCK_END
  * @endcode
  *
  * The spinlock is released automatically when the scope exits, including
@@ -170,7 +163,13 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * - perform blocking operations
  * while holding a spinlock.
  */
-#define WITH_SPINLOCK(spinlock) _WITH_SPINLOCK_BLOCK_WITH_ID(spinlock, __COUNTER__)
+#define WITH_SPINLOCK(spinlock)                                           \
+    (void)({                                                              \
+        spinlock_t* __spinlock__                                          \
+            __attribute__((cleanup(spinlock_auto_unlock)))                \
+            = (spinlock_lock(spinlock), (spinlock));
+
+#define WITH_SPINLOCK_END (void)0;});
 
 
 /** @} */ /* end of spinlock */

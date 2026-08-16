@@ -155,6 +155,7 @@ void interrupts_init(void)
     __asm__ volatile("dsb");
     __asm__ volatile("isb");
   }
+  WITH_INTERRUPTS_DISABLED_END
 }
 
 // --- Default exception/IRQ handler ---

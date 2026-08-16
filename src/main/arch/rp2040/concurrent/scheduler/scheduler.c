@@ -36,7 +36,9 @@ void scheduler_thread_exit(void* retval)
     {
       thread_context_terminated_init(&thread->context, retval);
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
   scheduler_state_machine_process_event(thread, THREAD_EVENT_TERMINATE);
 }
 
@@ -74,7 +76,6 @@ static void scheduler_thread_init_bootstrap(thread_t* thread, uint32_t* stack_ba
   thread->deadline = scheduler_timestamp_now();
   execution_context[CPUID].current_thread = thread;
 }
-
 
 void scheduler_thread_init(thread_t* thread, uint32_t* stack_base, size_t const stack_size, thread_func_t const start_routine, void* arg)
 {
@@ -129,6 +130,7 @@ void scheduler_init_hardware(void)
     REG_SET_FIELD(NVIC_IPR3, PPB_NVIC_IPR3_IP_15, 0); // Systick -> Highest priority
     REG_WRITE(SYST_CSR, SYST_CSR_ENABLE | SYST_CSR_TICKINT | SYST_CSR_CLKSOURCE);
   }
+  WITH_INTERRUPTS_DISABLED_END
 }
 
 void scheduler_init(void)
@@ -197,6 +199,7 @@ static inline thread_t* scheduler_pick_next_thread_on_core(uint32_t const cpuid)
       next = CONTAINER_OF(list_pop(&execution_context[cpuid].ready_queue), thread_t, scheduler_node);
     }
   }
+  WITH_SPINLOCK_END
   return next;
 }
 

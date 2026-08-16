@@ -28,6 +28,7 @@ static bool semaphore_acquire_internal(semaphore_t* semaphore, duration_t const*
 
     scheduler_state_machine_process_event(thread, THREAD_EVENT_BLOCK);
   }
+  WITH_INTERRUPTS_DISABLED_END
 
   return (timeout == NULL) || (thread->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN);
 }
@@ -54,7 +55,9 @@ bool semaphore_try_acquire(semaphore_t* semaphore)
       }
       semaphore->permits--;
     }
+    WITH_SPINLOCK_END
   }
+  WITH_INTERRUPTS_DISABLED_END
 
   return true;
 }
@@ -81,6 +84,7 @@ void semaphore_release(semaphore_t* semaphore)
           waiter->context.timeout.wakeup_state = THREAD_WAKEUP_AWOKEN;
         }
       }
+      WITH_SPINLOCK_END
 
       spinlock_lock(&semaphore->spinlock);
 
@@ -97,6 +101,7 @@ void semaphore_release(semaphore_t* semaphore)
 
     spinlock_unlock(&semaphore->spinlock);
   }
+  WITH_INTERRUPTS_DISABLED_END
 }
 
 uint32_t semaphore_count(semaphore_t const* semaphore)

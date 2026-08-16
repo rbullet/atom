@@ -61,19 +61,17 @@ static inline void hardware_spinlock_auto_unlock(hardware_spinlock_t** hardware_
   hardware_spinlock_unlock(*hardware_spinlock);
 }
 
-#define _WITH_HARDWARE_SPINLOCK_BLOCK_WITH_ID(spinlock, ID)                               \
-for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)            \
-    for (hardware_spinlock_t* __attribute__((cleanup(hardware_spinlock_auto_unlock)))     \
-        _CAT(_spinlock_guard_, ID) = (hardware_spinlock_lock(spinlock), spinlock);        \
-        _CAT(_once_, ID);                                                                 \
-        _CAT(_once_, ID) = false                                                          \
-  )
-
 /**
  * @endcond
  */
 
-#define WITH_HARDWARE_SPINLOCK(spinlock) _WITH_HARDWARE_SPINLOCK_BLOCK_WITH_ID(spinlock, __COUNTER__)
+#define WITH_HARDWARE_SPINLOCK(spinlock)                                   \
+    (void)({                                                               \
+        hardware_spinlock_t* __hardware_spinlock__                         \
+            __attribute__((cleanup(hardware_spinlock_auto_unlock)))        \
+            = (hardware_spinlock_lock(spinlock), (spinlock));
+
+#define WITH_HARDWARE_SPINLOCK_END (void)0;});
 
 #ifdef __cplusplus
 }

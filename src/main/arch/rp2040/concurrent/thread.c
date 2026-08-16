@@ -65,6 +65,7 @@ void thread_join(thread_t* thread, void** retval)
       scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
     }
   }
+  WITH_INTERRUPTS_DISABLED_END
   if (retval)
   {
     *retval = thread->context.retval;
@@ -92,6 +93,7 @@ bool thread_join_with_timeout(thread_t* thread, void** retval, duration_t const 
     spinlock_unlock(&thread->state_lock);
     scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
   }
+  WITH_INTERRUPTS_DISABLED_END
   bool const awoken = current->context.timeout.wakeup_state == THREAD_WAKEUP_AWOKEN;
   if (awoken && retval)
   {

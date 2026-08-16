@@ -20,6 +20,7 @@ static void* increment_routine(void* const arg)
     {
       shared_counter++;
     }
+    WITH_MUTEX_END
     thread_sleep(duration_of(5, MILLISECONDS));
   }
   return NULL;

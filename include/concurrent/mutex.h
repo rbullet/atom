@@ -198,14 +198,6 @@ static inline void mutex_auto_unlock(mutex_t** mutex)
   mutex_unlock(*mutex);
 }
 
-#define _WITH_MUTEX_BLOCK_WITH_ID(mutex, ID)                                     \
-for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)   \
-  for (mutex_t* __attribute__((cleanup(mutex_auto_unlock)))                      \
-      _CAT(_mutex_guard_, ID) = (mutex_lock(mutex), mutex);                      \
-      _CAT(_once_, ID);                                                          \
-      _CAT(_once_, ID) = false                                                   \
-  )
-
 /**
  * @endcond
  */
@@ -227,12 +219,19 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * {
  *     update_shared_state();
  * }
+ * WITH_MUTEX_END
  * @endcode
  *
  * @warning Must not be used from interrupt context.
  * @warning Do not sleep indefinitely while holding a mutex.
  */
-#define WITH_MUTEX(mutex) _WITH_MUTEX_BLOCK_WITH_ID(mutex, __COUNTER__)
+#define WITH_MUTEX(mutex)                                                   \
+    (void)({                                                                \
+            mutex_t* __mutex__                                              \
+            __attribute__((cleanup(mutex_auto_unlock)))                     \
+            = (mutex_lock(mutex), (mutex));
+
+#define WITH_MUTEX_END (void)0;});
 
 
 /** @} */ /* end of mutex */

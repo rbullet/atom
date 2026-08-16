@@ -21,6 +21,7 @@ static bool condition_variable_wait_internal(condition_variable_t* const conditi
 
     scheduler_state_machine_process_event(current, THREAD_EVENT_BLOCK);
   }
+  WITH_INTERRUPTS_DISABLED_END
 
   mutex_lock(mutex);
 
@@ -50,12 +51,14 @@ void condition_variable_signal(condition_variable_t* const condition_variable)
         waiter = CONTAINER_OF(condition_variable->waiters.head, thread_t, scheduler_node);
       }
     }
+    WITH_SPINLOCK_END
 
     if (waiter != NULL)
     {
       scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
+  WITH_INTERRUPTS_DISABLED_END
 }
 
 void condition_variable_broadcast(condition_variable_t* condition_variable)
@@ -71,6 +74,7 @@ void condition_variable_broadcast(condition_variable_t* condition_variable)
         list_push(&resume_list, list_pop(&condition_variable->waiters));
       }
     }
+    WITH_SPINLOCK_END
 
     while (!list_is_empty(&resume_list))
     {
@@ -78,4 +82,5 @@ void condition_variable_broadcast(condition_variable_t* condition_variable)
       scheduler_state_machine_process_event(waiter, THREAD_EVENT_WAKEUP);
     }
   }
+  WITH_INTERRUPTS_DISABLED_END
 }

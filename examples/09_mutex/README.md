@@ -42,6 +42,7 @@ static void* increment_routine(void* arg)
         {
             shared_counter++;
         }
+        WITH_MUTEX_END
 
         thread_sleep(duration_of(5, MILLISECONDS));
     }
@@ -124,6 +125,7 @@ WITH_MUTEX(&mutex)
 {
     shared_counter++;
 }
+WITH_MUTEX_END
 ```
 
 This keeps the critical section clearly scoped and prevents accidentally forgetting to release the mutex.

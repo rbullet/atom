@@ -20,6 +20,7 @@ bool spinlock_try_lock(spinlock_t *const spinlock)
       acquired = true;
     }
   }
+  WITH_HARDWARE_SPINLOCK_END
 
   return acquired;
 }

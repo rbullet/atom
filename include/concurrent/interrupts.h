@@ -99,7 +99,6 @@ uint32_t interrupts_disable(void);
  */
 void interrupts_restore(uint32_t state);
 
-
 /**
  * @cond INTERNAL
  */
@@ -108,25 +107,6 @@ static inline void interrupt_auto_restore_state(uint32_t const* state)
 {
   interrupts_restore(*state);
 }
-
-
-#define _WITH_INTERRUPTS_ENABLED_BLOCK_WITH_ID(ID)                               \
-for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)   \
-  for (uint32_t __attribute__((cleanup(interrupt_auto_restore_state)))           \
-      _CAT(_irq_state_, ID) = interrupts_enable();                               \
-      _CAT(_once_, ID);                                                          \
-      _CAT(_once_, ID) = false                                                   \
-  )
-
-
-#define _WITH_INTERRUPTS_DISABLED_BLOCK_WITH_ID(ID)                              \
-for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)   \
-  for (uint32_t __attribute__((cleanup(interrupt_auto_restore_state)))           \
-      _CAT(_irq_state_, ID) = interrupts_disable();                              \
-      _CAT(_once_, ID);                                                          \
-      _CAT(_once_, ID) = false                                                   \
-  )
-
 
 /**
  * @endcond
@@ -148,12 +128,18 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * {
  *     process_pending_events();
  * }
+ * WITH_INTERRUPTS_ENABLED_END
  * @endcode
  *
  * @warning This does not synchronize with the other CPU core.
  */
-#define WITH_INTERRUPTS_ENABLED _WITH_INTERRUPTS_ENABLED_BLOCK_WITH_ID(__COUNTER__)
+#define WITH_INTERRUPTS_ENABLED                                            \
+    (void)({                                                               \
+    uint32_t __irq_state__                                                 \
+        __attribute__((cleanup(interrupt_auto_restore_state)))             \
+        = interrupts_enable();
 
+#define WITH_INTERRUPTS_ENABLED_END (void)0;});
 
 /**
  * @brief Execute a scope with interrupts disabled.
@@ -168,6 +154,7 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * {
  *     update_scheduler_state();
  * }
+ * WITH_INTERRUPTS_DISABLED_END
  * @endcode
  *
  * Useful for protecting short sections of code that must not be interrupted
@@ -178,7 +165,13 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  * @warning This does not protect against concurrent access from another CPU
  *          core. Use spinlocks for SMP synchronization.
  */
-#define WITH_INTERRUPTS_DISABLED _WITH_INTERRUPTS_DISABLED_BLOCK_WITH_ID(__COUNTER__)
+#define WITH_INTERRUPTS_DISABLED                                       \
+    (void)({                                                           \
+        uint32_t __irq_state__                                         \
+            __attribute__((cleanup(interrupt_auto_restore_state)))     \
+            = interrupts_disable();
+
+#define WITH_INTERRUPTS_DISABLED_END (void)0;});
 
 
 /** @} */ /* end of interrupts */

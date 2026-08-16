@@ -148,14 +148,6 @@ static inline void semaphore_auto_release(semaphore_t** semaphore)
   semaphore_release(*semaphore);
 }
 
-#define _WITH_SEMAPHORE_BLOCK_WITH_ID(semaphore, ID)                             \
-for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)   \
-  for (semaphore_t* __attribute__((cleanup(semaphore_auto_release)))             \
-      _CAT(_semaphore_guard_, ID) = (semaphore_acquire(semaphore), semaphore);   \
-      _CAT(_once_, ID);                                                          \
-      _CAT(_once_, ID) = false                                                   \
-  )
-
 /**
  * @endcond
  */
@@ -165,8 +157,24 @@ for (bool _CAT(_once_, ID) = true; _CAT(_once_, ID); _CAT(_once_, ID) = false)  
  *
  * The semaphore is automatically released when leaving the scope,
  * including when exiting via `return`.
+ *
+ * Example:
+ *
+ * @code
+ * WITH_SEMAPHORE(&pool_semaphore)
+ * {
+ *     use_pooled_resource();
+ * }
+ * WITH_SEMAPHORE_END
+ * @endcode
  */
-#define WITH_SEMAPHORE(semaphore) _WITH_SEMAPHORE_BLOCK_WITH_ID(semaphore, __COUNTER__)
+#define WITH_SEMAPHORE(semaphore)                                         \
+    (void)({                                                              \
+        semaphore_t* __semaphore___                                       \
+            __attribute__((cleanup(semaphore_auto_release)))              \
+            = (semaphore_acquire(semaphore), (semaphore));
+
+#define WITH_SEMAPHORE_END (void)0;})
 
 
 /** @} */
