@@ -20,6 +20,7 @@ extern "C" {
 
 /**
 * @defgroup ring_buffer Ring Buffer
+* @brief Fixed-capacity FIFO buffer for storing fixed-size elements.
 * @{
 */
 

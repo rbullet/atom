@@ -78,6 +78,7 @@ extern "C" {
 #include "concurrent/thread.h"
 #include "concurrent/event_flags.h"
 #include "concurrent/scheduler.h"
+#include "concurrent/message_queue.h"
 
 /** @} */
 

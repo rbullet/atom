@@ -53,6 +53,7 @@ target_sources(${PROJECT_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/condition_variable.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/deferred_task.c"
         "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/event_flags.c"
+        "${CMAKE_CURRENT_SOURCE_DIR}/concurrent/message_queue.c"
 
         "${CMAKE_CURRENT_SOURCE_DIR}/util/time/timestamp.c"
 
