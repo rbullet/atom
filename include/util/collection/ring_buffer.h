@@ -127,6 +127,16 @@ size_t ring_buffer_count(ring_buffer_t const* ring_buffer);
 
 
 /**
+ * @brief Gets the capacity of the ring buffer.
+ *
+ * @param ring_buffer Ring buffer to inspect.
+ *
+ * @return Capacity of the buffer.
+ */
+size_t ring_buffer_capacity(ring_buffer_t const* ring_buffer);
+
+
+/**
  * @brief Clears all messages from the ring buffer.
  *
  * @param ring_buffer Ring buffer to modify.

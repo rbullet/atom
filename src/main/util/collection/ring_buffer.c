@@ -67,6 +67,11 @@ size_t ring_buffer_count(ring_buffer_t const* ring_buffer)
   return ring_buffer->count;
 }
 
+size_t ring_buffer_capacity(ring_buffer_t const* ring_buffer)
+{
+  return ring_buffer->capacity;
+}
+
 void ring_buffer_clear(ring_buffer_t* ring_buffer)
 {
   ring_buffer->head = 0;
