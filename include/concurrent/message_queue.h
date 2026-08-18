@@ -103,7 +103,7 @@ void message_queue_pop(message_queue_t* message_queue, void* message);
  *
  * @return true if the message was successfully popped, otherwise false if the timeout expired.
  */
-void message_queue_pop_with_timeout(message_queue_t* message_queue, void* message, duration_t timeout);
+bool message_queue_pop_with_timeout(message_queue_t* message_queue, void* message, duration_t timeout);
 
 
 /**

@@ -11,9 +11,8 @@ static uint32_t brian_thread_stack[THREAD_STACK_SIZE];
 
 #define CONCERT_STARTED (1u << 0)
 #define BRIAN_PRESENT (1u << 1)
-#define JULIE_PRESENT (1u << 2)
 
-event_flags_t concert_events = EVENT_FLAGS_INITIALIZER;
+static event_flags_t concert_events = EVENT_FLAGS_INITIALIZER;
 
 static void* annie_thread_routine(void* arg)
 {

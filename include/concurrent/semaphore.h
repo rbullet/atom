@@ -170,7 +170,7 @@ static inline void semaphore_auto_release(semaphore_t** semaphore)
  */
 #define WITH_SEMAPHORE(semaphore)                                         \
     (void)({                                                              \
-        semaphore_t* __semaphore___                                       \
+        semaphore_t* __semaphore__                                        \
             __attribute__((cleanup(semaphore_auto_release)))              \
             = (semaphore_acquire(semaphore), (semaphore));
 
